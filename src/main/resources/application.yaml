@@ -1,0 +1,65 @@
+# ──────────────────────────────────────────
+# application.yml (공통 기본값)
+# ──────────────────────────────────────────
+spring:
+    application:
+        name: venue-service
+
+    threads:
+        virtual:
+            enabled: true
+
+    config:
+        import: "optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}"
+
+    profiles:
+        active: local
+
+    jpa:
+        open-in-view: false
+        properties:
+            hibernate:
+                default_schema: venue
+                format_sql: true
+        hibernate:
+            ddl-auto: validate
+
+    kafka:
+        producer:
+            key-serializer: org.apache.kafka.common.serialization.StringSerializer
+            value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+            properties:
+                spring.json.add.type.headers: false
+        consumer:
+            key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+            value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+            properties:
+                spring.json.trusted.packages: "com.firstticket.*"
+
+    security:
+        oauth2:
+            resourceserver:
+                jwt:
+                    issuer-uri: ${KEYCLOAK_ISSUER_URI}
+
+server:
+    port: 8086
+
+eureka:
+    instance:
+        prefer-ip-address: true
+    client:
+        register-with-eureka: true
+        fetch-registry: true
+
+management:
+    endpoints:
+        web:
+            exposure:
+                include: health, info, prometheus, metrics
+    endpoint:
+        health:
+            show-details: always
+    tracing:
+        sampling:
+            probability: 1.0
