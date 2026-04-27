@@ -76,12 +76,34 @@ public class Venue extends BaseUserEntity {
 
     /**
      * 구역 추가.
-     * VenueSeat 자동 생성(V-02)은 Application 계층에서 처리
-     * 도메인은 Section 생성 책임만 가짐
+     * 타입에 따라 Section 생성 방식이 달라진다.
+     * - SEATED   : rowCount, colCount 필수 → VenueSeat 자동 생성은 Application 계층에서 처리
+     * - STANDING : capacity 필수
+     * - FREE     : capacity 필수
      */
-    public Section addSection(String name, int rowCount, int colCount) {
+    public Section addSection(SeatType type, String name,
+        Integer rowCount, Integer colCount,
+        Integer capacity) {
         validateNotDeleted();
-        Section section = Section.create(this, name, rowCount, colCount);
+        // type null 선검증
+        if (type == null) {
+            throw new VenueException(VenueErrorCode.INVALID_SECTION_TYPE);
+        }
+
+        // 타입별 필수 파라미터 null 선검증
+        // 언박싱(Integer → int) 시 NPE 방지
+        if (type == SeatType.SEATED && (rowCount == null || colCount == null)) {
+            throw new VenueException(VenueErrorCode.INVALID_SEAT_COUNT);
+        }
+        if ((type == SeatType.STANDING || type == SeatType.FREE) && capacity == null) {
+            throw new VenueException(VenueErrorCode.INVALID_CAPACITY);
+        }
+
+        Section section = switch (type) {
+            case SEATED -> Section.createSeated(this, name, rowCount, colCount);
+            case STANDING -> Section.createStanding(this, name, capacity);
+            case FREE -> Section.createFree(this, name, capacity);
+        };
         sections.add(section);
         return section;
     }
@@ -94,10 +116,13 @@ public class Venue extends BaseUserEntity {
      */
     public void removeSection(UUID sectionId) {
         validateNotDeleted();
+
         if (sectionId == null) {
             throw new VenueException(VenueErrorCode.INVALID_SECTION_ID);
         }
-        boolean removed = sections.removeIf(s -> s.getId().equals(sectionId));
+        boolean removed = sections.removeIf(
+            s -> sectionId.equals(s.getId())
+        );
         if (!removed) {
             throw new VenueException(VenueErrorCode.SECTION_NOT_FOUND);
         }

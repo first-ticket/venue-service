@@ -20,6 +20,8 @@ public enum VenueErrorCode implements ErrorCode {
         "공연장 이름은 필수입니다"),
     INVALID_VENUE_ADDRESS(HttpStatus.BAD_REQUEST,
         "공연장 주소는 필수입니다"),
+    INVALID_SECTION_TYPE(HttpStatus.BAD_REQUEST,
+        "구역 타입은 필수입니다"),
 
     // --- Section -----
     SECTION_NOT_FOUND(HttpStatus.NOT_FOUND,
@@ -30,6 +32,8 @@ public enum VenueErrorCode implements ErrorCode {
         "구역 ID는 필수입니다"),
     INVALID_SEAT_COUNT(HttpStatus.BAD_REQUEST,
         "행과 열 수는 1 이상이어야 합니다"),
+    INVALID_CAPACITY(HttpStatus.BAD_REQUEST,
+        "수용 인원은 1명 이상이어야 합니다"),
 
     // ---- VenueSeat --------
     SEAT_NOT_FOUND(HttpStatus.NOT_FOUND,
