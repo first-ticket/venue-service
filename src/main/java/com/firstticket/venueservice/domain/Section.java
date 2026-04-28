@@ -22,6 +22,25 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+/**
+ * 구역(Section) 도메인 엔티티 — Venue 애그리거트 하위 엔티티
+ *
+ * Section은 Venue 없이 독립적으로 존재할 수 없다.
+ * 반드시 Venue.addSection()을 통해서만 생성되며,
+ * SectionRepository를 별도로 두지 않는다.
+ *
+ * 수정 API 없음:
+ * rowCount·colCount 변경은 VenueSeat 전체 재생성을 수반하므로
+ * 삭제 후 재등록 방식으로 처리
+ *
+ * 타입별 필드 사용 규칙:
+ * - SEATED   : rowCount, colCount 사용 / capacity null
+ *              Section 등록 시 rowCount × colCount 개 VenueSeat 자동 생성 (V-02)
+ * - STANDING : capacity 사용 / rowCount, colCount null
+ *              프로그램 등록 시 ScheduleSectionCapacity로 회차별 인원 관리
+ * - FREE     : capacity 사용 / rowCount, colCount null
+ *              STANDING과 동일한 방식
+ */
 @Entity
 @Table(name = "p_section")
 @Getter
@@ -78,8 +97,12 @@ public class Section extends BaseUserEntity {
     // -------- 타입별 정적 팩토리 메서드 ---------------------------
 
     /**
-     * Package-private: Venue.addSection()을 통해서만 생성.
-     * SEATED 구역: rowCount × colCount 개의 VenueSeat이 자동 생성된다 (V-02).
+     * SEATED 구역 생성.
+     * Package-private: Venue.addSection()을 통해서만 생성
+     * 직접 호출 시 Venue 애그리거트 불변식이 깨질 수 있음에 주의!!!!
+     *
+     * 이후 Application 계층에서
+     * Section 저장 후 rowCount × colCount 개의 VenueSeat을 일괄 생성한다 (V-02).
      */
     static Section createSeated(Venue venue, String name, int rowCount, int colCount) {
         validateVenue(venue);
@@ -91,9 +114,12 @@ public class Section extends BaseUserEntity {
     }
 
     /**
-     * Package-private: Venue.addSection()을 통해서만 생성.
-     * STANDING 구역: VenueSeat 없이 capacity만 관리.
-     * 프로그램 등록 시 이 capacity를 초과할 수 없다.
+     * STANDING 구역 생성.
+     * Package-private: Venue.addSection()을 통해서만 생성
+     *
+     * VenueSeat을 생성하지 않음
+     * 프로그램 등록 시 ScheduleSectionCapacity로 회차별 인원을 지정하며,
+     * 이 capacity가 상한선 역할을 함
      */
     static Section createStanding(Venue venue, String name, int capacity) {
         validateVenue(venue);
@@ -105,10 +131,11 @@ public class Section extends BaseUserEntity {
     }
 
     /**
-     * Package-private: Venue.addSection()을 통해서만 생성.
-     * FREE 구역: STANDING과 동일하게 capacity만 관리.
+     * FREE 구역 생성.
+     * Package-private: Venue.addSection()을 통해서만 생성
+     *
      * STANDING과 구현이 동일하지만 타입별 확장 가능성을 위해 분리 유지.
-     * - PriceGrade에서 FREE 타입은 sectionId를 null로 설정한다.
+     * PriceGrade에서 FREE 타입은 sectionId를 null로 설정
      */
     static Section createFree(Venue venue, String name, int capacity) {
         validateVenue(venue);
@@ -124,7 +151,10 @@ public class Section extends BaseUserEntity {
     /**
      * 구역 내 좌석 수 반환.
      * - SEATED   : rowCount × colCount
-     * - STANDING·FREE : capacity
+     * - STANDING·FREE : capacity (상한선 기준)
+     *
+     * rowCount·colCount·capacity는 각 정적 팩토리 생성 메서드에서 보장되지만
+     * 방어적으로 추가 null 검증을 수행한다.
      */
     public int getSeatCount() {
         return switch (type) {
@@ -145,10 +175,18 @@ public class Section extends BaseUserEntity {
     }
 
     /**
-     * 프로그램 등록 시 요청한 인원이 구역 수용 상한을 초과하는지 검증.
-     * SEATED는 고정 좌석이므로 이 검증 대상이 아님
+     * 프로그램 등록 시 요청 인원이 구역 수용 상한을 초과하는지 검증
+     * SEATED는 고정 좌석 기반이므로 해당 검증 대상 아님!!!
+     *
+     * 호출처: Application 계층
+     * VenueClient를 통해 Section 정보를 조회한 뒤 이 메서드로 검증
+     *
+     * @param requestedCapacity 프로그램에서 요청하는 구역별 인원
+     * @throws VenueException requestedCapacity <= 0 이면 INVALID_CAPACITY
+     * @throws VenueException requestedCapacity > this.capacity 이면 CAPACITY_EXCEEDED
      */
     public void validateCapacityLimit(int requestedCapacity) {
+        // SEATED는 VenueSeat 기반이므로 인원 상한 검증 불필요
         if (type == SeatType.SEATED)
             return;
 
@@ -157,12 +195,12 @@ public class Section extends BaseUserEntity {
             throw new VenueException(VenueErrorCode.INVALID_CAPACITY);
         }
 
-        // requestedCapacity <= 0: 입력값 오류
+        // requestedCapacity <= 0: 입력값 오류, 요청 인원 0 이하 차단
         if (requestedCapacity <= 0) {
             throw new VenueException(VenueErrorCode.INVALID_CAPACITY);
         }
 
-        // requestedCapacity > this.capacity: 공연장 상한 초과
+        // requestedCapacity > this.capacity: 공연장 구역 수용 상한 초과 차단
         if (requestedCapacity > this.capacity) {
             throw new VenueException(VenueErrorCode.CAPACITY_EXCEEDED);
         }
@@ -170,12 +208,21 @@ public class Section extends BaseUserEntity {
 
     // ------ private 검증 -------------
 
+    /**
+     * 구역명 null/blank 검증.
+     * 세 팩토리 메서드에서 공통으로 사용
+     */
     private static void validateSectionName(String name) {
         if (name == null || name.isBlank()) {
             throw new VenueException(VenueErrorCode.INVALID_SECTION_NAME);
         }
     }
 
+    /**
+     * venue null 검증.
+     * Section은 반드시 Venue에 속해야 한다는 불변식을 생성 시점에 강제
+     * DB flush 시점이 아닌 세 팩토리 메서드 호출 시점에 즉시 차단
+     */
     private static void validateVenue(Venue venue) {
         if (venue == null) {
             throw new VenueException(VenueErrorCode.INVALID_VENUE);
