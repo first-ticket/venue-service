@@ -82,6 +82,7 @@ public class Section extends BaseUserEntity {
      * SEATED 구역: rowCount × colCount 개의 VenueSeat이 자동 생성된다 (V-02).
      */
     static Section createSeated(Venue venue, String name, int rowCount, int colCount) {
+        validateVenue(venue);
         validateSectionName(name);
         if (rowCount <= 0 || colCount <= 0) {
             throw new VenueException(VenueErrorCode.INVALID_SEAT_COUNT);
@@ -95,6 +96,7 @@ public class Section extends BaseUserEntity {
      * 프로그램 등록 시 이 capacity를 초과할 수 없다.
      */
     static Section createStanding(Venue venue, String name, int capacity) {
+        validateVenue(venue);
         validateSectionName(name);
         if (capacity <= 0) {
             throw new VenueException(VenueErrorCode.INVALID_CAPACITY);
@@ -105,8 +107,11 @@ public class Section extends BaseUserEntity {
     /**
      * Package-private: Venue.addSection()을 통해서만 생성.
      * FREE 구역: STANDING과 동일하게 capacity만 관리.
+     * STANDING과 구현이 동일하지만 타입별 확장 가능성을 위해 분리 유지.
+     * - PriceGrade에서 FREE 타입은 sectionId를 null로 설정한다.
      */
     static Section createFree(Venue venue, String name, int capacity) {
+        validateVenue(venue);
         validateSectionName(name);
         if (capacity <= 0) {
             throw new VenueException(VenueErrorCode.INVALID_CAPACITY);
@@ -146,11 +151,20 @@ public class Section extends BaseUserEntity {
     public void validateCapacityLimit(int requestedCapacity) {
         if (type == SeatType.SEATED)
             return;
+
+        // 데이터 무결성 문제 — createStanding/createFree에서 보장되지만 방어적 검증
         if (this.capacity == null) {
             throw new VenueException(VenueErrorCode.INVALID_CAPACITY);
         }
-        if (requestedCapacity <= 0 || requestedCapacity > this.capacity) {
+
+        // requestedCapacity <= 0: 입력값 오류
+        if (requestedCapacity <= 0) {
             throw new VenueException(VenueErrorCode.INVALID_CAPACITY);
+        }
+
+        // requestedCapacity > this.capacity: 공연장 상한 초과
+        if (requestedCapacity > this.capacity) {
+            throw new VenueException(VenueErrorCode.CAPACITY_EXCEEDED);
         }
     }
 
@@ -159,6 +173,12 @@ public class Section extends BaseUserEntity {
     private static void validateSectionName(String name) {
         if (name == null || name.isBlank()) {
             throw new VenueException(VenueErrorCode.INVALID_SECTION_NAME);
+        }
+    }
+
+    private static void validateVenue(Venue venue) {
+        if (venue == null) {
+            throw new VenueException(VenueErrorCode.INVALID_VENUE);
         }
     }
 }

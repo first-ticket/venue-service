@@ -34,6 +34,10 @@ public enum VenueErrorCode implements ErrorCode {
         "행과 열 수는 1 이상이어야 합니다"),
     INVALID_CAPACITY(HttpStatus.BAD_REQUEST,
         "수용 인원은 1명 이상이어야 합니다"),
+    INVALID_VENUE(HttpStatus.BAD_REQUEST,
+        "구역은 반드시 공연장에 속해야 합니다"),
+    CAPACITY_EXCEEDED(HttpStatus.BAD_REQUEST,
+        "요청 인원이 구역 최대 수용 인원을 초과합니다"),
 
     // ---- VenueSeat --------
     SEAT_NOT_FOUND(HttpStatus.NOT_FOUND,
