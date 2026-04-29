@@ -6,7 +6,7 @@
 
 
 -- ── p_venue ──────────────────────────────────────────
-CREATE TABLE p_venue
+CREATE TABLE IF NOT EXISTS p_venue
 (
     id         UUID         NOT NULL DEFAULT gen_random_uuid(),
     name       VARCHAR(255) NOT NULL,
@@ -25,15 +25,18 @@ CREATE TABLE p_venue
 
 -- 공연장명 검색 인덱스
 -- partial index: soft delete된 레코드 제외
-CREATE INDEX idx_venue_name
-    ON p_venue (name) WHERE deleted_at IS NULL;
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_class WHERE relname = 'idx_venue_name') THEN
+CREATE INDEX idx_venue_name ON p_venue (name) WHERE deleted_at IS NULL;[cite: 6]
+END IF;
+END $$;
 
 
 -- ── p_section ─────────────────────────────────────────
 -- Section은 Venue 애그리거트 하위 엔티티
 -- SectionRepository를 별도로 두지 않음
 -- 수정 API 없음: 삭제 후 재등록 방식 사용
-CREATE TABLE p_section
+CREATE TABLE IF NOT EXISTS p_section
 (
     id         UUID         NOT NULL DEFAULT gen_random_uuid(),
     venue_id   UUID         NOT NULL,
@@ -90,8 +93,11 @@ CREATE TABLE p_section
 );
 
 -- 공연장별 구역 조회 인덱스
-CREATE INDEX idx_section_venue_id
-    ON p_section (venue_id) WHERE deleted_at IS NULL;
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_class WHERE relname = 'idx_section_venue_id') THEN
+CREATE INDEX idx_section_venue_id ON p_section (venue_id) WHERE deleted_at IS NULL;[cite: 6]
+END IF;
+END $$;
 
 
 -- ── p_venue_seat ──────────────────────────────────────
@@ -101,7 +107,7 @@ CREATE INDEX idx_section_venue_id
 -- 독립 애그리거트: section_id를 값으로만 참조 (FK 없음)
 -- 이유: VenueSeat은 Venue 애그리거트와 분리된 독립 애그리거트
 --       Section과 FK를 두면 애그리거트 경계가 깨짐
-CREATE TABLE p_venue_seat
+CREATE TABLE IF NOT EXISTS p_venue_seat
 (
     id              UUID        NOT NULL DEFAULT gen_random_uuid(),
 
@@ -141,12 +147,14 @@ CREATE TABLE p_venue_seat
         UNIQUE (section_id, row_num, col_num)
 );
 
--- 구역별 좌석 조회 인덱스
+-- 구역별 좌석 조회 인덱스, 물리 상태별 필터 인덱스
 -- CreateSectionUseCase에서 VenueSeat 일괄 생성 후 조회 시 사용
-CREATE INDEX idx_venue_seat_section_id
-    ON p_venue_seat (section_id) WHERE deleted_at IS NULL;
-
--- 물리 상태별 필터 인덱스
 -- isAvailable() 선검증 쿼리에서 사용
-CREATE INDEX idx_venue_seat_physical_status
-    ON p_venue_seat (physical_status) WHERE deleted_at IS NULL;
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_class WHERE relname = 'idx_venue_seat_section_id') THEN
+CREATE INDEX idx_venue_seat_section_id ON p_venue_seat (section_id) WHERE deleted_at IS NULL;[cite: 6]
+END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_class WHERE relname = 'idx_venue_seat_physical_status') THEN
+CREATE INDEX idx_venue_seat_physical_status ON p_venue_seat (physical_status) WHERE deleted_at IS NULL;[cite: 6]
+END IF;
+END $$;

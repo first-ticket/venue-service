@@ -24,7 +24,7 @@ spring:
         open-in-view: false
         properties:
             hibernate:
-                default_schema: venue
+                default_schema: program
                 format_sql: true
         hibernate:
             ddl-auto: validate
