@@ -1,7 +1,7 @@
 -- =====================================================
 -- Venue Service — V1 초기 스키마
--- schema: venue
--- Spring 설정: spring.jpa.properties.hibernate.default_schema=venue
+-- schema: program
+-- Spring 설정: spring.jpa.properties.hibernate.default_schema=program
 -- =====================================================
 
 
