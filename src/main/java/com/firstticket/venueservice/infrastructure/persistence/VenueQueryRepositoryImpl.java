@@ -115,6 +115,13 @@ public class VenueQueryRepositoryImpl implements VenueQueryRepository {
      * 새 정렬 필드 추가 시 반드시 이 메서드에 케이스를 추가해야 한다.
      */
     private OrderSpecifier<?> toOrderSpecifier(String sortField, String direction) {
+        // direction 검증 — "asc" 또는 "desc" 외의 값은 기본 정렬로 fallback
+        if (direction == null
+            || (!direction.equalsIgnoreCase("asc")
+            && !direction.equalsIgnoreCase("desc"))) {
+            return venue.createdAt.desc();
+        }
+
         String field = Objects.toString(sortField, "createdAt");
         boolean isAsc = "asc".equalsIgnoreCase(direction);
 
