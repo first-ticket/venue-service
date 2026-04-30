@@ -30,7 +30,7 @@ public class VenueRepositoryImpl implements VenueRepository {
     @Override
     public Optional<Venue> findById(UUID id) {
         // soft delete 제외 조회
-        return venueJpaRepository.findActiveById(id);
+        return venueJpaRepository.findById(id);
     }
 
     @Override
@@ -49,6 +49,6 @@ public class VenueRepositoryImpl implements VenueRepository {
         // 기본 existsById()는 deletedAt을 무시하므로
         // soft delete를 반영한 existsActiveById()로 대체한다.
         // findById()와 동일하게 active 레코드만 존재하는 것으로 간주한다.
-        return venueJpaRepository.existsActiveById(id);
+        return venueJpaRepository.existsById(id);
     }
 }

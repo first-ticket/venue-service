@@ -136,11 +136,18 @@ public class VenueQueryRepositoryImpl implements VenueQueryRepository {
     /**
      * 이름·주소 키워드 검색.
      * 이름 또는 주소 중 하나라도 키워드를 포함하면 반환한다.
+     *
+     * trim 처리:
+     * 공백만 있는 키워드(" ")는 trim 후 blank 검증으로 null 반환한다.
+     * 불필요한 LIKE 조건 생성을 방지한다.
      */
     private BooleanExpression keywordContains(String keyword) {
         if (keyword == null)
             return null;
-        return venue.name.containsIgnoreCase(keyword)
-            .or(venue.address.containsIgnoreCase(keyword));
+        String trimmed = keyword.trim();
+        if (trimmed.isBlank())
+            return null;
+        return venue.name.containsIgnoreCase(trimmed)
+            .or(venue.address.containsIgnoreCase(trimmed));
     }
 }

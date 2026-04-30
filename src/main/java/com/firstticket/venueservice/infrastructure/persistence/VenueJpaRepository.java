@@ -6,6 +6,7 @@ import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.lang.NonNull;
 
 import com.firstticket.venueservice.domain.Venue;
 
@@ -18,21 +19,26 @@ public interface VenueJpaRepository extends JpaRepository<Venue, UUID> {
 
     /**
      * soft delete 제외 단건 조회.
+     * JpaRepository 기본 findById()를 재정의하여
+     * deletedAt이 있는 레코드를 반환하지 않는다.
      */
+    @NonNull
+    @Override
     @Query("SELECT v FROM Venue v WHERE v.id = :id AND v.deletedAt IS NULL")
-    Optional<Venue> findActiveById(@Param("id") UUID id);
+    Optional<Venue> findById(@NonNull @Param("id") UUID id);
 
     /**
      * soft delete 제외 존재 여부 확인.
-     * 기본 existsById()는 deletedAt을 무시하므로 명시적 쿼리로 대체한다.
+     * JpaRepository 기본 existsById()를 재정의하여
      * deletedAt이 있는 레코드는 존재하지 않는 것으로 간주한다.
      */
+    @Override
     @Query("""
         SELECT COUNT(v) > 0 FROM Venue v
         WHERE v.id = :id
           AND v.deletedAt IS NULL
         """)
-    boolean existsActiveById(@Param("id") UUID id);
+    boolean existsById(@NonNull @Param("id") UUID id);
 
     /**
      * sections 컬렉션 JOIN FETCH 조회.

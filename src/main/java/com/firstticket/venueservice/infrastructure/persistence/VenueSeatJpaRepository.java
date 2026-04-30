@@ -54,9 +54,18 @@ public interface VenueSeatJpaRepository extends JpaRepository<VenueSeat, UUID> {
      * &#064;Modifying  쿼리는 반드시 트랜잭션 컨텍스트 안에서 실행되어야 한다.
      * 트랜잭션 없이 실행하면 TransactionRequiredException이 발생하고
      * 1차 캐시와 DB 상태가 불일치할 수 있다.
+     *
+     * flushAutomatically = true:
+     *  삭제 쿼리 실행 전 영속성 컨텍스트를 flush하여
+     *  아직 DB에 반영되지 않은 변경사항과의 불일치를 방지한다.
+     *
+     *  clearAutomatically = true:
+     *  삭제 쿼리 실행 후 영속성 컨텍스트를 clear하여
+     *  삭제된 엔티티가 1차 캐시에 stale 상태로 남아 있는 문제를 방지한다.
+     *  이후 같은 sectionId로 VenueSeat을 조회하면 DB에서 새로 로딩된다.
      */
     @Transactional
-    @Modifying
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("DELETE FROM VenueSeat vs WHERE vs.sectionId = :sectionId")
     void deleteAllBySectionId(@Param("sectionId") UUID sectionId);
 }
