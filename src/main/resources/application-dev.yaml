@@ -30,6 +30,7 @@ spring:
         schemas: program
         default-schema: program
         locations: classpath:db/migration
+        table: flyway_schema_history_venue
         baseline-on-migrate: true
 
     kafka:
