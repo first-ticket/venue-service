@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS p_venue
 -- partial index: soft delete된 레코드 제외
 DO $$ BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_class WHERE relname = 'idx_venue_name') THEN
-CREATE INDEX idx_venue_name ON p_venue (name) WHERE deleted_at IS NULL;[cite: 6]
+CREATE INDEX idx_venue_name ON p_venue (name) WHERE deleted_at IS NULL;
 END IF;
 END $$;
 
@@ -95,7 +95,7 @@ CREATE TABLE IF NOT EXISTS p_section
 -- 공연장별 구역 조회 인덱스
 DO $$ BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_class WHERE relname = 'idx_section_venue_id') THEN
-CREATE INDEX idx_section_venue_id ON p_section (venue_id) WHERE deleted_at IS NULL;[cite: 6]
+CREATE INDEX idx_section_venue_id ON p_section (venue_id) WHERE deleted_at IS NULL;
 END IF;
 END $$;
 
@@ -152,9 +152,9 @@ CREATE TABLE IF NOT EXISTS p_venue_seat
 -- isAvailable() 선검증 쿼리에서 사용
 DO $$ BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_class WHERE relname = 'idx_venue_seat_section_id') THEN
-CREATE INDEX idx_venue_seat_section_id ON p_venue_seat (section_id) WHERE deleted_at IS NULL;[cite: 6]
+CREATE INDEX idx_venue_seat_section_id ON p_venue_seat (section_id) WHERE deleted_at IS NULL;
 END IF;
     IF NOT EXISTS (SELECT 1 FROM pg_class WHERE relname = 'idx_venue_seat_physical_status') THEN
-CREATE INDEX idx_venue_seat_physical_status ON p_venue_seat (physical_status) WHERE deleted_at IS NULL;[cite: 6]
+CREATE INDEX idx_venue_seat_physical_status ON p_venue_seat (physical_status) WHERE deleted_at IS NULL;
 END IF;
 END $$;

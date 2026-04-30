@@ -42,23 +42,24 @@ public class VenueQueryRepositoryImpl implements VenueQueryRepository {
     @Override
     public PagedResult<VenueSummaryData> findBySpec(VenueSearchSpec spec) {
 
-        List<VenueSummaryData> content = buildBaseQuery(spec)
+        List<VenueSummaryData> content = buildContentQuery(spec)
             .select(Projections.constructor(VenueSummaryData.class,
                 venue.id,
                 venue.name,
                 venue.address,
-                // soft delete된 구역 제외한 구역 수
                 section.count().intValue()
             ))
             .groupBy(venue.id, venue.name, venue.address)
-            .orderBy(toOrderSpecifier(spec.sortField(), spec.direction()))
+            // tie-breaker: 기본 정렬 키가 같을 때 venue.id ASC로 안정 정렬 보장
+            .orderBy(toOrderSpecifier(spec.sortField(), spec.direction()), venue.id.asc())
             .offset(spec.getOffset())
             .limit(spec.pageSize())
             .fetch();
 
-        // count 쿼리도 동일한 join·where 조건 사용
-        // content 쿼리와 join/where가 일치해야 페이지 정보가 정확하다
-        Long total = buildBaseQuery(spec)
+        // count 쿼리는 section join 없이 venue만으로 처리
+        // section join은 구역 수 집계(section.count())에만 필요하므로
+        // count 쿼리에 포함하면 불필요한 비용이 발생한다
+        Long total = buildCountQuery(spec)
             .select(venue.countDistinct())
             .fetchOne();
 
@@ -73,15 +74,29 @@ public class VenueQueryRepositoryImpl implements VenueQueryRepository {
     // ------- 공통 베이스 쿼리 -----------------------------------
 
     /**
-     * content 쿼리와 count 쿼리의 join·where 조건을 공통으로 관리한다.
-     * 두 쿼리 간 조건 불일치로 인한 페이지 정보 오류를 방지한다.
+     * content 쿼리용 베이스 — section join 포함.
+     * 구역 수(section.count()) 집계가 필요하므로 section join이 필요하다.
      */
-    private JPAQuery<?> buildBaseQuery(VenueSearchSpec spec) {
+    private JPAQuery<?> buildContentQuery(VenueSearchSpec spec) {
         return queryFactory
             .from(venue)
             .leftJoin(section)
             .on(section.venue.id.eq(venue.id)
-                .and(section.deletedAt.isNull()))   // soft delete된 구역 제외
+                .and(section.deletedAt.isNull()))
+            .where(
+                deletedAtIsNull(),
+                keywordContains(spec.keyword())
+            );
+    }
+
+    /**
+     * count 쿼리용 베이스 — section join 제외.
+     * countDistinct(venue)는 venue 조건만 필요하므로
+     * section join을 제외하여 불필요한 비용을 줄인다.
+     */
+    private JPAQuery<?> buildCountQuery(VenueSearchSpec spec) {
+        return queryFactory
+            .from(venue)
             .where(
                 deletedAtIsNull(),
                 keywordContains(spec.keyword())
@@ -100,16 +115,15 @@ public class VenueQueryRepositoryImpl implements VenueQueryRepository {
      * 새 정렬 필드 추가 시 반드시 이 메서드에 케이스를 추가해야 한다.
      */
     private OrderSpecifier<?> toOrderSpecifier(String sortField, String direction) {
-        // null 정규화 — switch에 null이 들어오면 NPE 발생
         String field = Objects.toString(sortField, "createdAt");
         boolean isAsc = "asc".equalsIgnoreCase(direction);
 
         return switch (field) {
             case "name" -> isAsc ? venue.name.asc() : venue.name.desc();
             case "createdAt" -> isAsc ? venue.createdAt.asc() : venue.createdAt.desc();
-            // 알 수 없는 값은 최신순으로 fallback
             default -> venue.createdAt.desc();
         };
+        // tie-breaker(venue.id.asc())는 orderBy() 호출부에서 추가한다
     }
 
     // -------- where 조건 헬퍼 -------------------

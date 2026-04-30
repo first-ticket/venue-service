@@ -23,6 +23,18 @@ public interface VenueJpaRepository extends JpaRepository<Venue, UUID> {
     Optional<Venue> findActiveById(@Param("id") UUID id);
 
     /**
+     * soft delete 제외 존재 여부 확인.
+     * 기본 existsById()는 deletedAt을 무시하므로 명시적 쿼리로 대체한다.
+     * deletedAt이 있는 레코드는 존재하지 않는 것으로 간주한다.
+     */
+    @Query("""
+        SELECT COUNT(v) > 0 FROM Venue v
+        WHERE v.id = :id
+          AND v.deletedAt IS NULL
+        """)
+    boolean existsActiveById(@Param("id") UUID id);
+
+    /**
      * sections 컬렉션 JOIN FETCH 조회.
      * N+1 방지. addSection·removeSection 유스케이스에서 사용.
      *

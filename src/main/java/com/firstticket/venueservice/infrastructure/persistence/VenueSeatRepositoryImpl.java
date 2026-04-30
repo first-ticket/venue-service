@@ -9,6 +9,7 @@ import org.springframework.stereotype.Repository;
 import com.firstticket.venueservice.domain.VenueSeat;
 import com.firstticket.venueservice.domain.VenueSeatRepository;
 
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 
 /**
@@ -42,7 +43,11 @@ public class VenueSeatRepositoryImpl implements VenueSeatRepository {
     }
 
     @Override
+    @Transactional
     public void deleteAllBySectionId(UUID sectionId) {
+        // @Modifying 쿼리는 트랜잭션 컨텍스트 안에서 실행되어야 한다.
+        // JpaRepository 레벨에도 @Transactional이 있지만
+        // 구현체 레벨에서도 명시하여 호출 경로 전체의 트랜잭션을 보장한다.
         venueSeatJpaRepository.deleteAllBySectionId(sectionId);
     }
 }
