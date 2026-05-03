@@ -27,12 +27,14 @@ public class ProgramProviderImpl implements ProgramProvider {
         try {
             return programClient.hasProgramsForVenue(venueId);
         } catch (feign.FeignException.NotFound e) {
-            log.warn("[ProgramProvider] 프로그램 존재 여부 조회 실패 — venueId: {}, error: {}",
-                venueId, e.getMessage());
+            log.warn("[ProgramProvider] 프로그램 존재 여부 조회 실패 — venueId: {}, error: {}", venueId, e.getMessage());
             return true;  // fail-fast: 조회 실패 시 삭제 차단
+
         } catch (feign.FeignException e) {
             // 그 외 Feign 오류 → 인프라 예외 propagate
-            throw e;
+            log.warn("[ProgramProvider] Program Service 호출 실패 — venueId: {}, error: {}", venueId, e.getMessage());
+            return true;  // fail-fast 일관성 유지
+
         }
     }
 }

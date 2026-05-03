@@ -61,6 +61,7 @@ public interface VenueJpaRepository extends JpaRepository<Venue, UUID> {
         JOIN v.sections s
         WHERE s.id = :sectionId
           AND v.deletedAt IS NULL
+          AND s.deletedAt IS NULL
         """)
     Optional<Venue> findVenueBySectionId(@Param("sectionId") UUID sectionId);
 }
