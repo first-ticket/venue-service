@@ -40,6 +40,11 @@ public class VenueRepositoryImpl implements VenueRepository {
     }
 
     @Override
+    public Optional<Venue> findVenueBySectionId(UUID sectionId) {
+        return venueJpaRepository.findVenueBySectionId(sectionId);
+    }
+
+    @Override
     public void delete(Venue venue) {
         venueJpaRepository.delete(venue);
     }

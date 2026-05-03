@@ -22,6 +22,7 @@ import com.firstticket.venueservice.domain.VenueSeat;
 import com.firstticket.venueservice.domain.VenueSeatRepository;
 import com.firstticket.venueservice.domain.exception.VenueErrorCode;
 import com.firstticket.venueservice.domain.exception.VenueException;
+import com.firstticket.venueservice.domain.service.ProgramProvider;
 
 import lombok.RequiredArgsConstructor;
 
@@ -41,6 +42,7 @@ public class VenueCommandService {
 
     private final VenueRepository venueRepository;
     private final VenueSeatRepository venueSeatRepository;
+    private final ProgramProvider programProvider;
 
     // ---- 공연장 생성 -------------------------------------
 
@@ -95,6 +97,13 @@ public class VenueCommandService {
 
         Venue venue = findVenueOrThrow(venueId);
         checkOwner(venue, requesterId);
+
+        // 등록된 프로그램 존재 여부 확인
+        // fail-fast: Program Service 호출 실패 시 삭제 차단
+        if (programProvider.hasProgramsForVenue(venueId)) {
+            throw new VenueException(VenueErrorCode.VENUE_HAS_PROGRAMS);
+        }
+
         venueRepository.delete(venue);
     }
 
@@ -175,6 +184,7 @@ public class VenueCommandService {
         validateSeatStatusCommand(command);
 
         VenueSeat seat = findSeatOrThrow(command.seatId());
+        checkSeatOwner(seat, requesterId);
         seat.markBroken();
         return VenueSeatResult.from(seat);
     }
@@ -189,6 +199,7 @@ public class VenueCommandService {
         validateSeatStatusCommand(command);
 
         VenueSeat seat = findSeatOrThrow(command.seatId());
+        checkSeatOwner(seat, requesterId);
         seat.restore();
         return VenueSeatResult.from(seat);
     }
@@ -245,6 +256,17 @@ public class VenueCommandService {
         if (!venue.getCreatedBy().equals(requesterId)) {
             throw new BusinessException(CommonErrorCode.FORBIDDEN);
         }
+    }
+
+    /**
+     * 좌석 소유자 검증.
+     * sectionId → Venue 경로로 소유자를 확인한다.
+     * VenueSeat은 독립 애그리거트이므로 Section을 거쳐 Venue를 조회한다.
+     */
+    private void checkSeatOwner(VenueSeat seat, UUID requesterId) {
+        Venue venue = venueRepository.findVenueBySectionId(seat.getSectionId())
+            .orElseThrow(() -> new VenueException(VenueErrorCode.VENUE_NOT_FOUND));
+        checkOwner(venue, requesterId);
     }
 
     // --- private 검증 메서드 --------------------------------------------
@@ -309,21 +331,31 @@ public class VenueCommandService {
         if (command.type() == null) {
             throw new VenueException(VenueErrorCode.INVALID_SECTION_TYPE);
         }
-        // 타입별 필수 파라미터 검증 — 언박싱(Integer → int) 시 NPE 방지
-        if (command.type() == SeatType.SEATED) {
-            if (command.rowCount() == null || command.colCount() == null) {
-                throw new VenueException(VenueErrorCode.INVALID_SEAT_COUNT);
+
+        switch (command.type()) {
+            case SEATED -> {
+                // rowCount, colCount 필수 / capacity null 강제
+                if (command.rowCount() == null || command.colCount() == null) {
+                    throw new VenueException(VenueErrorCode.INVALID_SEAT_COUNT);
+                }
+                if (command.rowCount() <= 0 || command.colCount() <= 0) {
+                    throw new VenueException(VenueErrorCode.INVALID_SEAT_COUNT);
+                }
+                if (command.capacity() != null) {
+                    throw new VenueException(VenueErrorCode.INVALID_SECTION_FIELD_COMBINATION);
+                }
             }
-            if (command.rowCount() <= 0 || command.colCount() <= 0) {
-                throw new VenueException(VenueErrorCode.INVALID_SEAT_COUNT);
-            }
-        }
-        if (command.type() == SeatType.STANDING || command.type() == SeatType.FREE) {
-            if (command.capacity() == null) {
-                throw new VenueException(VenueErrorCode.INVALID_CAPACITY);
-            }
-            if (command.capacity() <= 0) {
-                throw new VenueException(VenueErrorCode.INVALID_CAPACITY);
+            case STANDING, FREE -> {
+                // capacity 필수 / rowCount, colCount null 강제
+                if (command.capacity() == null) {
+                    throw new VenueException(VenueErrorCode.INVALID_CAPACITY);
+                }
+                if (command.capacity() <= 0) {
+                    throw new VenueException(VenueErrorCode.INVALID_CAPACITY);
+                }
+                if (command.rowCount() != null || command.colCount() != null) {
+                    throw new VenueException(VenueErrorCode.INVALID_SECTION_FIELD_COMBINATION);
+                }
             }
         }
     }

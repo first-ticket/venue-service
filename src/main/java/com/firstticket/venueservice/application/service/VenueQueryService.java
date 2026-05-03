@@ -19,8 +19,8 @@ import com.firstticket.venueservice.domain.VenueSeatRepository;
 import com.firstticket.venueservice.domain.exception.VenueErrorCode;
 import com.firstticket.venueservice.domain.exception.VenueException;
 import com.firstticket.venueservice.domain.query.PagedResult;
+import com.firstticket.venueservice.domain.query.SectionQueryRepository;
 import com.firstticket.venueservice.domain.query.VenueQueryRepository;
-import com.firstticket.venueservice.infrastructure.persistence.SectionJpaRepository;
 
 import lombok.RequiredArgsConstructor;
 
@@ -37,7 +37,7 @@ public class VenueQueryService {
     private final VenueRepository venueRepository;
     private final VenueSeatRepository venueSeatRepository;
     private final VenueQueryRepository venueQueryRepository;
-    private final SectionJpaRepository sectionJpaRepository;
+    private final SectionQueryRepository sectionQueryRepository;
 
     /**
      * 공연장 단건 조회.
@@ -105,7 +105,7 @@ public class VenueQueryService {
     public SectionCapacityResult getSectionCapacity(UUID sectionId) {
         validateSectionId(sectionId);
 
-        Section section = sectionJpaRepository.findById(sectionId)
+        Section section = sectionQueryRepository.findById(sectionId)
             .orElseThrow(() -> new VenueException(VenueErrorCode.SECTION_NOT_FOUND));
         return SectionCapacityResult.from(section);
     }
@@ -136,7 +136,7 @@ public class VenueQueryService {
      */
     private void validateSeatId(UUID seatId) {
         if (seatId == null) {
-            throw new VenueException(VenueErrorCode.SEAT_NOT_FOUND);
+            throw new VenueException(VenueErrorCode.INVALID_SEAT_ID);
         }
     }
 

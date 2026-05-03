@@ -30,6 +30,9 @@ public enum VenueErrorCode implements ErrorCode {
     INVALID_VENUE_ID(HttpStatus.BAD_REQUEST,
         "공연장 ID는 필수입니다"),
 
+    VENUE_HAS_PROGRAMS(HttpStatus.CONFLICT,
+        "해당 공연장에 등록된 프로그램이 있어 삭제할 수 없습니다"),
+
     // --- Section -----
     SECTION_NOT_FOUND(HttpStatus.NOT_FOUND,
         "구역을 찾을 수 없습니다"),
@@ -52,7 +55,15 @@ public enum VenueErrorCode implements ErrorCode {
     CAPACITY_EXCEEDED(HttpStatus.BAD_REQUEST,
         "요청 인원이 구역 최대 수용 인원을 초과합니다"),
 
+    INVALID_SECTION_FIELD_COMBINATION(HttpStatus.BAD_REQUEST,
+        "구역 타입과 필드 조합이 올바르지 않습니다. "
+            + "SEATED는 rowCount·colCount 필수, "
+            + "STANDING·FREE는 capacity 필수입니다"),
+
     // ---- VenueSeat --------
+    INVALID_SEAT_ID(HttpStatus.BAD_REQUEST,
+        "좌석 ID는 필수입니다"),
+
     SEAT_NOT_FOUND(HttpStatus.NOT_FOUND,
         "좌석을 찾을 수 없습니다"),
 
