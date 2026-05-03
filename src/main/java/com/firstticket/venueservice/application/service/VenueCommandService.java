@@ -50,6 +50,9 @@ public class VenueCommandService {
      * findByIdWithSections() 없이 바로 반환한다.
      */
     public VenueResult createVenue(UUID requesterId, CreateVenueCommand command) {
+        validateRequesterId(requesterId);
+        validateCreateVenueCommand(command);
+
         Venue venue = Venue.create(command.name(), command.address());
         return VenueResult.from(venueRepository.save(venue));
     }
@@ -63,6 +66,9 @@ public class VenueCommandService {
      * findByIdWithSections()로 조회한다.
      */
     public VenueResult updateVenue(UUID requesterId, UpdateVenueCommand command) {
+        validateRequesterId(requesterId);
+        validateUpdateVenueCommand(command);
+
         Venue venue = findVenueWithSectionsOrThrow(command.venueId());
         checkOwner(venue, requesterId);
 
@@ -81,6 +87,12 @@ public class VenueCommandService {
      * TODO: Program Service와 연동하여 등록된 프로그램 존재 여부 검증 추가
      */
     public void deleteVenue(UUID requesterId, UUID venueId) {
+        validateRequesterId(requesterId);
+
+        if (venueId == null) {
+            throw new VenueException(VenueErrorCode.INVALID_VENUE_ID);
+        }
+
         Venue venue = findVenueOrThrow(venueId);
         checkOwner(venue, requesterId);
         venueRepository.delete(venue);
@@ -97,6 +109,9 @@ public class VenueCommandService {
      * findByIdWithSections()로 조회한다.
      */
     public VenueResult createSection(UUID requesterId, CreateSectionCommand command) {
+        validateRequesterId(requesterId);
+        validateCreateSectionCommand(command);
+
         Venue venue = findVenueWithSectionsOrThrow(command.venueId());
         checkOwner(venue, requesterId);
 
@@ -128,6 +143,9 @@ public class VenueCommandService {
      * (removeSection()이 sections 컬렉션을 직접 수정하기 때문).
      */
     public void deleteSection(UUID requesterId, UUID venueId, UUID sectionId) {
+        validateRequesterId(requesterId);
+        validateDeleteSectionCommand(venueId, sectionId);
+
         Venue venue = findVenueWithSectionsOrThrow(venueId);
         checkOwner(venue, requesterId);
 
@@ -153,6 +171,9 @@ public class VenueCommandService {
      */
     public VenueSeatResult markSeatBroken(UUID requesterId,
         UpdateVenueSeatStatusCommand command) {
+        validateRequesterId(requesterId);
+        validateSeatStatusCommand(command);
+
         VenueSeat seat = findSeatOrThrow(command.seatId());
         seat.markBroken();
         return VenueSeatResult.from(seat);
@@ -164,6 +185,9 @@ public class VenueCommandService {
      */
     public VenueSeatResult restoreSeat(UUID requesterId,
         UpdateVenueSeatStatusCommand command) {
+        validateRequesterId(requesterId);
+        validateSeatStatusCommand(command);
+
         VenueSeat seat = findSeatOrThrow(command.seatId());
         seat.restore();
         return VenueSeatResult.from(seat);
@@ -220,6 +244,110 @@ public class VenueCommandService {
     private void checkOwner(Venue venue, UUID requesterId) {
         if (!venue.getCreatedBy().equals(requesterId)) {
             throw new BusinessException(CommonErrorCode.FORBIDDEN);
+        }
+    }
+
+    // --- private 검증 메서드 --------------------------------------------
+
+    /**
+     * requesterId null 검증.
+     * 모든 커맨드 메서드 진입 시 호출한다.
+     */
+    private void validateRequesterId(UUID requesterId) {
+        if (requesterId == null) {
+            throw new BusinessException(CommonErrorCode.UNAUTHORIZED);
+        }
+    }
+
+    /**
+     * 공연장 생성 커맨드 검증.
+     * name, address null·blank 검증.
+     * 도메인에서도 검증하지만 Application 계층에서 먼저 차단한다.
+     */
+    private void validateCreateVenueCommand(CreateVenueCommand command) {
+        if (command.name() == null || command.name().isBlank()) {
+            throw new VenueException(VenueErrorCode.INVALID_VENUE_NAME);
+        }
+        if (command.address() == null || command.address().isBlank()) {
+            throw new VenueException(VenueErrorCode.INVALID_VENUE_ADDRESS);
+        }
+    }
+
+    /**
+     * 공연장 수정 커맨드 검증.
+     * venueId null 검증.
+     * name, address는 부분 업데이트이므로 null 허용.
+     * 단 빈 문자열은 의도적인 값이 아니므로 차단한다.
+     */
+    private void validateUpdateVenueCommand(UpdateVenueCommand command) {
+        if (command.venueId() == null) {
+            throw new VenueException(VenueErrorCode.INVALID_VENUE_ID);
+        }
+        if (command.name() != null && command.name().isBlank()) {
+            throw new VenueException(VenueErrorCode.INVALID_VENUE_NAME);
+        }
+        if (command.address() != null && command.address().isBlank()) {
+            throw new VenueException(VenueErrorCode.INVALID_VENUE_ADDRESS);
+        }
+    }
+
+    /**
+     * 구역 추가 커맨드 검증.
+     * venueId, name, type null 검증.
+     * 타입별 필수 파라미터 null 검증 — 언박싱 NPE 방지.
+     * - SEATED   : rowCount, colCount 필수
+     * - STANDING : capacity 필수
+     * - FREE     : capacity 필수
+     */
+    private void validateCreateSectionCommand(CreateSectionCommand command) {
+        if (command.venueId() == null) {
+            throw new VenueException(VenueErrorCode.INVALID_VENUE_ID);
+        }
+        if (command.name() == null || command.name().isBlank()) {
+            throw new VenueException(VenueErrorCode.INVALID_SECTION_NAME);
+        }
+        if (command.type() == null) {
+            throw new VenueException(VenueErrorCode.INVALID_SECTION_TYPE);
+        }
+        // 타입별 필수 파라미터 검증 — 언박싱(Integer → int) 시 NPE 방지
+        if (command.type() == SeatType.SEATED) {
+            if (command.rowCount() == null || command.colCount() == null) {
+                throw new VenueException(VenueErrorCode.INVALID_SEAT_COUNT);
+            }
+            if (command.rowCount() <= 0 || command.colCount() <= 0) {
+                throw new VenueException(VenueErrorCode.INVALID_SEAT_COUNT);
+            }
+        }
+        if (command.type() == SeatType.STANDING || command.type() == SeatType.FREE) {
+            if (command.capacity() == null) {
+                throw new VenueException(VenueErrorCode.INVALID_CAPACITY);
+            }
+            if (command.capacity() <= 0) {
+                throw new VenueException(VenueErrorCode.INVALID_CAPACITY);
+            }
+        }
+    }
+
+    /**
+     * 구역 삭제 커맨드 검증.
+     * venueId, sectionId null 검증.
+     */
+    private void validateDeleteSectionCommand(UUID venueId, UUID sectionId) {
+        if (venueId == null) {
+            throw new VenueException(VenueErrorCode.INVALID_VENUE_ID);
+        }
+        if (sectionId == null) {
+            throw new VenueException(VenueErrorCode.INVALID_SECTION_ID);
+        }
+    }
+
+    /**
+     * 좌석 상태 변경 커맨드 검증.
+     * seatId null 검증.
+     */
+    private void validateSeatStatusCommand(UpdateVenueSeatStatusCommand command) {
+        if (command.seatId() == null) {
+            throw new VenueException(VenueErrorCode.SEAT_NOT_FOUND);
         }
     }
 }

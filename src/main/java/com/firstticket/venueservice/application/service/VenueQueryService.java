@@ -44,6 +44,8 @@ public class VenueQueryService {
      * 공연장 기본 정보 + 구역 목록 반환.
      */
     public VenueResult getVenue(UUID venueId) {
+        validateVenueId(venueId);
+
         Venue venue = venueRepository.findByIdWithSections(venueId)
             .orElseThrow(() -> new VenueException(VenueErrorCode.VENUE_NOT_FOUND));
         return VenueResult.from(venue);
@@ -55,6 +57,8 @@ public class VenueQueryService {
      * 권한 제한 없음 — ALL.
      */
     public PagedResult<VenueSummaryResult> searchVenues(VenueSearchQuery query) {
+        validateSearchQuery(query);
+
         PagedResult<com.firstticket.venueservice.domain.query.VenueSummaryData> pagedData =
             venueQueryRepository.findBySpec(query.toSpec());
 
@@ -74,6 +78,8 @@ public class VenueQueryService {
      * STANDING·FREE 타입은 VenueSeat이 없으므로 빈 리스트를 반환한다.
      */
     public List<VenueSeatResult> getSeatsBySection(UUID sectionId) {
+        validateSectionId(sectionId);
+
         return venueSeatRepository.findBySectionId(sectionId).stream()
             .map(VenueSeatResult::from)
             .toList();
@@ -83,6 +89,8 @@ public class VenueQueryService {
      * 좌석 단건 조회.
      */
     public VenueSeatResult getSeat(UUID seatId) {
+        validateSeatId(seatId);
+
         VenueSeat seat = venueSeatRepository.findById(seatId)
             .orElseThrow(() -> new VenueException(VenueErrorCode.SEAT_NOT_FOUND));
         return VenueSeatResult.from(seat);
@@ -95,8 +103,56 @@ public class VenueQueryService {
      * STANDING·FREE: capacity
      */
     public SectionCapacityResult getSectionCapacity(UUID sectionId) {
+        validateSectionId(sectionId);
+
         Section section = sectionJpaRepository.findById(sectionId)
             .orElseThrow(() -> new VenueException(VenueErrorCode.SECTION_NOT_FOUND));
         return SectionCapacityResult.from(section);
+    }
+
+    // ----- private 검증 메서드 ------------------------------------------
+
+    /**
+     * venueId null 검증.
+     * 단건 조회 메서드 진입 시 호출한다.
+     */
+    private void validateVenueId(UUID venueId) {
+        if (venueId == null) {
+            throw new VenueException(VenueErrorCode.INVALID_VENUE_ID);
+        }
+    }
+
+    /**
+     * sectionId null 검증.
+     */
+    private void validateSectionId(UUID sectionId) {
+        if (sectionId == null) {
+            throw new VenueException(VenueErrorCode.INVALID_SECTION_ID);
+        }
+    }
+
+    /**
+     * seatId null 검증.
+     */
+    private void validateSeatId(UUID seatId) {
+        if (seatId == null) {
+            throw new VenueException(VenueErrorCode.SEAT_NOT_FOUND);
+        }
+    }
+
+    /**
+     * 목록 조회 쿼리 검증.
+     * pageSize, pageNumber 범위 검증.
+     */
+    private void validateSearchQuery(VenueSearchQuery query) {
+        if (query == null) {
+            throw new VenueException(VenueErrorCode.INVALID_SEARCH_QUERY);
+        }
+        if (query.pageSize() <= 0) {
+            throw new VenueException(VenueErrorCode.INVALID_PAGE_SIZE);
+        }
+        if (query.pageNumber() < 0) {
+            throw new VenueException(VenueErrorCode.INVALID_PAGE_NUMBER);
+        }
     }
 }
