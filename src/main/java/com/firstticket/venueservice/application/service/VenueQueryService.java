@@ -7,9 +7,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.firstticket.venueservice.application.dto.query.VenueSearchQuery;
+import com.firstticket.venueservice.application.dto.result.SectionCapacityResult;
 import com.firstticket.venueservice.application.dto.result.VenueResult;
 import com.firstticket.venueservice.application.dto.result.VenueSeatResult;
 import com.firstticket.venueservice.application.dto.result.VenueSummaryResult;
+import com.firstticket.venueservice.domain.Section;
 import com.firstticket.venueservice.domain.Venue;
 import com.firstticket.venueservice.domain.VenueRepository;
 import com.firstticket.venueservice.domain.VenueSeat;
@@ -18,6 +20,7 @@ import com.firstticket.venueservice.domain.exception.VenueErrorCode;
 import com.firstticket.venueservice.domain.exception.VenueException;
 import com.firstticket.venueservice.domain.query.PagedResult;
 import com.firstticket.venueservice.domain.query.VenueQueryRepository;
+import com.firstticket.venueservice.infrastructure.persistence.SectionJpaRepository;
 
 import lombok.RequiredArgsConstructor;
 
@@ -34,6 +37,7 @@ public class VenueQueryService {
     private final VenueRepository venueRepository;
     private final VenueSeatRepository venueSeatRepository;
     private final VenueQueryRepository venueQueryRepository;
+    private final SectionJpaRepository sectionJpaRepository;
 
     /**
      * 공연장 단건 조회.
@@ -82,5 +86,17 @@ public class VenueQueryService {
         VenueSeat seat = venueSeatRepository.findById(seatId)
             .orElseThrow(() -> new VenueException(VenueErrorCode.SEAT_NOT_FOUND));
         return VenueSeatResult.from(seat);
+    }
+
+    /**
+     * Section 수용 인원 상한 조회.
+     * Program Service의 VenueClient가 호출하는 내부 API에서 사용한다.
+     * SEATED: rowCount × colCount
+     * STANDING·FREE: capacity
+     */
+    public SectionCapacityResult getSectionCapacity(UUID sectionId) {
+        Section section = sectionJpaRepository.findById(sectionId)
+            .orElseThrow(() -> new VenueException(VenueErrorCode.SECTION_NOT_FOUND));
+        return SectionCapacityResult.from(section);
     }
 }
