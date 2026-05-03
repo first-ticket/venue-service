@@ -31,7 +31,7 @@ public class ProgramProviderImpl implements ProgramProvider {
             return true;  // fail-fast: 조회 실패 시 삭제 차단
 
         } catch (feign.FeignException e) {
-            // 그 외 Feign 오류 → 인프라 예외 propagate
+            // // 그 외 Feign 오류도 fail-fast로 true 반환 (삭제 차단)
             log.warn("[ProgramProvider] Program Service 호출 실패 — venueId: {}, error: {}", venueId, e.getMessage());
             return true;  // fail-fast 일관성 유지
 
