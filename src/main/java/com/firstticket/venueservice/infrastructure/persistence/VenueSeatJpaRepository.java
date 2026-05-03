@@ -8,11 +8,10 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.lang.NonNull;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.firstticket.venueservice.domain.VenueSeat;
-
-import lombok.NonNull;
 
 /**
  * Spring Data JPA Repository.
@@ -23,15 +22,13 @@ public interface VenueSeatJpaRepository extends JpaRepository<VenueSeat, UUID> {
 
     /**
      * soft delete 제외 단건 조회.
-     * 기본 JpaRepository.findById()는 deletedAt을 무시하므로
-     * 명시적 쿼리로 재정의한다.
+     * JpaRepository 기본 findById()를 재정의하여
+     * deletedAt이 있는 레코드를 반환하지 않는다.
      */
-    @Query("""
-        SELECT vs FROM VenueSeat vs
-        WHERE vs.id = :id
-          AND vs.deletedAt IS NULL
-        """)
-    Optional<VenueSeat> findActiveById(@Param("id") @NonNull UUID id);
+    @NonNull
+    @Override
+    @Query("SELECT vs FROM VenueSeat vs WHERE vs.id = :id AND vs.deletedAt IS NULL")
+    Optional<VenueSeat> findById(@NonNull @Param("id") UUID id);
 
     /**
      * 구역 ID로 전체 좌석 조회.

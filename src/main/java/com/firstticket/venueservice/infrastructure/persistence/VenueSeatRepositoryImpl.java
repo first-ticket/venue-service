@@ -5,11 +5,11 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.firstticket.venueservice.domain.VenueSeat;
 import com.firstticket.venueservice.domain.VenueSeatRepository;
 
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 
 /**
