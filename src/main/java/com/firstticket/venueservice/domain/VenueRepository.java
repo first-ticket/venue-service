@@ -26,6 +26,12 @@ public interface VenueRepository {
      */
     Optional<Venue> findByIdWithSections(UUID id);
 
+    /**
+     * sectionId로 해당 구역이 속한 공연장을 조회한다.
+     * 좌석 소유자 검증 시 VenueSeat → Section → Venue 경로로 사용한다.
+     */
+    Optional<Venue> findVenueBySectionId(UUID sectionId);
+
     /** 공연장 물리 삭제 */
     void delete(Venue venue);
 

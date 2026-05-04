@@ -40,15 +40,18 @@ public class VenueRepositoryImpl implements VenueRepository {
     }
 
     @Override
+    public Optional<Venue> findVenueBySectionId(UUID sectionId) {
+        return venueJpaRepository.findVenueBySectionId(sectionId);
+    }
+
+    @Override
     public void delete(Venue venue) {
         venueJpaRepository.delete(venue);
     }
 
     @Override
     public boolean existsById(UUID id) {
-        // 기본 existsById()는 deletedAt을 무시하므로
-        // soft delete를 반영한 existsActiveById()로 대체한다.
-        // findById()와 동일하게 active 레코드만 존재하는 것으로 간주한다.
+        // VenueJpaRepository.existsById()가 soft delete를 반영하도록 재정의되어 있다.
         return venueJpaRepository.existsById(id);
     }
 }
