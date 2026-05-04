@@ -52,7 +52,7 @@ import lombok.RequiredArgsConstructor;
  */
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/venues")
+@RequestMapping("/api/v1/venues")
 public class VenueController {
 
     private final VenueCommandService venueCommandService;
