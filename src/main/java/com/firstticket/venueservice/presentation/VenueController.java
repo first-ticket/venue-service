@@ -19,7 +19,7 @@ import com.firstticket.common.response.ApiResponse;
 import com.firstticket.common.response.CommonErrorCode;
 import com.firstticket.common.web.AuthContext;
 import com.firstticket.common.web.UserRole;
-import com.firstticket.venueservice.application.dto.command.CreateSectionCommand;
+import com.firstticket.venueservice.application.dto.command.SectionCreationInfo;
 import com.firstticket.venueservice.application.dto.command.UpdateVenueSeatStatusCommand;
 import com.firstticket.venueservice.application.dto.result.VenueResult;
 import com.firstticket.venueservice.application.dto.result.VenueSeatResult;
@@ -71,15 +71,16 @@ public class VenueController {
         checkHostOrAdmin();
         UUID requesterId = AuthContext.getUserId();
 
-        // 단일 트랜잭션으로 공연장 + 구역 일괄 생성 — partial commit 방지
-        List<CreateSectionCommand> sectionCommands = request.sections() == null
+        List<SectionCreationInfo> sections = request.sections() == null
             ? List.of()
             : request.sections().stream()
-            .map(s -> s.toCommand(UUID.randomUUID()))
+            .map(s -> new SectionCreationInfo(
+                s.name(), s.type(),
+                s.rowCount(), s.colCount(), s.capacity()))
             .toList();
 
         VenueResult result = venueCommandService.createVenueWithSections(
-            requesterId, request.toCommand(), sectionCommands
+            requesterId, request.toCommand(), sections
         );
 
         return ApiResponse.success(
