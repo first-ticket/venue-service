@@ -1,5 +1,8 @@
 package com.firstticket.venueservice.application.service;
 
+import static com.firstticket.venueservice.domain.SeatType.*;
+
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -10,6 +13,7 @@ import com.firstticket.common.exception.BusinessException;
 import com.firstticket.common.response.CommonErrorCode;
 import com.firstticket.venueservice.application.dto.command.CreateSectionCommand;
 import com.firstticket.venueservice.application.dto.command.CreateVenueCommand;
+import com.firstticket.venueservice.application.dto.command.SectionCreationInfo;
 import com.firstticket.venueservice.application.dto.command.UpdateVenueCommand;
 import com.firstticket.venueservice.application.dto.command.UpdateVenueSeatStatusCommand;
 import com.firstticket.venueservice.application.dto.result.VenueResult;
@@ -59,6 +63,61 @@ public class VenueCommandService {
         return VenueResult.from(venueRepository.save(venue));
     }
 
+    /**
+     * 공연장 + 구역 일괄 생성.
+     * 단일 트랜잭션 안에서 공연장 생성 → 구역 추가 → VenueSeat 생성을 처리한다.
+     * Controller에서 분산된 호출을 하나로 통합하여 partial commit 방지.
+     */
+    /**
+     * 공연장 + 구역 일괄 생성.
+     * 단일 트랜잭션 안에서 공연장 생성 → 구역 추가 → VenueSeat 생성을 처리한다.
+     * Controller에서 분산된 호출을 하나로 통합하여 partial commit을 방지한다.
+     */
+    @Transactional
+    public VenueResult createVenueWithSections(UUID requesterId,
+        CreateVenueCommand venueCommand,
+        List<SectionCreationInfo> sections) {
+        validateRequesterId(requesterId);
+        validateCreateVenueCommand(venueCommand);
+
+        // 공연장 생성 및 저장
+        Venue venue = Venue.create(venueCommand.name(), venueCommand.address());
+        venueRepository.save(venue);
+
+        // 구역이 없으면 공연장만 반환
+        if (sections == null || sections.isEmpty()) {
+            return VenueResult.from(venue);
+        }
+
+        // 구역 추가 및 SEATED 타입 VenueSeat 일괄 생성
+        List<VenueSeat> seatsToSave = new ArrayList<>();
+
+        for (SectionCreationInfo info : sections) {
+            validateSectionCreationInfo(info);
+
+            // venue.addSection()이 Venue 객체를 직접 참조하므로
+            // venueId를 별도로 주입할 필요 없음
+            Section section = venue.addSection(
+                info.type(),
+                info.name(),
+                info.rowCount(),
+                info.colCount(),
+                info.capacity()
+            );
+
+            if (info.type() == SEATED) {
+                seatsToSave.addAll(createSeats(section));
+            }
+        }
+
+        venueRepository.save(venue);
+
+        if (!seatsToSave.isEmpty()) {
+            venueSeatRepository.saveAll(seatsToSave);
+        }
+
+        return VenueResult.from(venue);
+    }
     // -------- 공연장 수정 -----------------------------------------
 
     /**
@@ -134,7 +193,7 @@ public class VenueCommandService {
         venueRepository.save(venue);
 
         // SEATED 타입: rowCount × colCount 개 VenueSeat 일괄 생성 (V-02)
-        if (command.type() == SeatType.SEATED) {
+        if (command.type() == SEATED) {
             List<VenueSeat> seats = createSeats(section);
             venueSeatRepository.saveAll(seats);
         }
@@ -164,7 +223,7 @@ public class VenueCommandService {
             .filter(s -> s.getId().equals(sectionId))
             .findFirst()
             .ifPresent(section -> {
-                if (section.getType() == SeatType.SEATED) {
+                if (section.getType() == SEATED) {
                     venueSeatRepository.deleteAllBySectionId(sectionId);
                 }
             });
@@ -292,6 +351,38 @@ public class VenueCommandService {
         }
         if (command.address() == null || command.address().isBlank()) {
             throw new VenueException(VenueErrorCode.INVALID_VENUE_ADDRESS);
+        }
+    }
+
+    /**
+     * 구역 생성 정보 검증.
+     * validateCreateSectionCommand()와 동일한 규칙을 적용한다.
+     */
+    private void validateSectionCreationInfo(SectionCreationInfo info) {
+        if (info.name() == null || info.name().isBlank()) {
+            throw new VenueException(VenueErrorCode.INVALID_SECTION_NAME);
+        }
+        if (info.type() == null) {
+            throw new VenueException(VenueErrorCode.INVALID_SECTION_TYPE);
+        }
+        switch (info.type()) {
+            case SEATED -> {
+                if (info.rowCount() == null || info.colCount() == null
+                    || info.rowCount() <= 0 || info.colCount() <= 0) {
+                    throw new VenueException(VenueErrorCode.INVALID_SEAT_COUNT);
+                }
+                if (info.capacity() != null) {
+                    throw new VenueException(VenueErrorCode.INVALID_SECTION_FIELD_COMBINATION);
+                }
+            }
+            case STANDING, FREE -> {
+                if (info.capacity() == null || info.capacity() <= 0) {
+                    throw new VenueException(VenueErrorCode.INVALID_CAPACITY);
+                }
+                if (info.rowCount() != null || info.colCount() != null) {
+                    throw new VenueException(VenueErrorCode.INVALID_SECTION_FIELD_COMBINATION);
+                }
+            }
         }
     }
 

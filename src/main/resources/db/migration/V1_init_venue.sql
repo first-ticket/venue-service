@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS p_venue
 -- 공연장명 검색 인덱스
 -- partial index: soft delete된 레코드 제외
 DO $$ BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_class WHERE relname = 'idx_venue_name') THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_class c JOIN pg_namespace n ON c.relnamespace = n.oid WHERE c.relname = 'idx_venue_name' AND n.nspname = 'program') THEN
 CREATE INDEX idx_venue_name ON program.p_venue (name) WHERE deleted_at IS NULL;
 END IF;
 END $$;
@@ -94,7 +94,7 @@ CREATE TABLE IF NOT EXISTS p_section
 
 -- 공연장별 구역 조회 인덱스
 DO $$ BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_class WHERE relname = 'idx_section_venue_id') THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_class c JOIN pg_namespace n ON c.relnamespace = n.oid WHERE c.relname = 'idx_section_venue_id' AND n.nspname = 'program') THEN
 CREATE INDEX idx_section_venue_id ON program.p_section (venue_id) WHERE deleted_at IS NULL;
 END IF;
 END $$;
@@ -151,10 +151,10 @@ CREATE TABLE IF NOT EXISTS p_venue_seat
 -- CreateSectionUseCase에서 VenueSeat 일괄 생성 후 조회 시 사용
 -- isAvailable() 선검증 쿼리에서 사용
 DO $$ BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_class WHERE relname = 'idx_venue_seat_section_id') THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_class c JOIN pg_namespace n ON c.relnamespace = n.oid WHERE c.relname = 'idx_venue_seat_section_id' AND n.nspname = 'program') THEN
 CREATE INDEX idx_venue_seat_section_id ON program.p_venue_seat (section_id) WHERE deleted_at IS NULL;
 END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_class WHERE relname = 'idx_venue_seat_physical_status') THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_class c JOIN pg_namespace n ON c.relnamespace = n.oid WHERE c.relname = 'idx_venue_seat_physical_status' AND n.nspname = 'program') THEN
 CREATE INDEX idx_venue_seat_physical_status ON program.p_venue_seat (physical_status) WHERE deleted_at IS NULL;
 END IF;
 END $$;
