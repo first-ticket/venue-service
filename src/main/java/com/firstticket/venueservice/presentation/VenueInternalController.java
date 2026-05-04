@@ -9,11 +9,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.firstticket.common.response.ApiResponse;
-import com.firstticket.venueservice.application.service.VenueQueryService;
 import com.firstticket.venueservice.application.dto.result.SectionCapacityResult;
-import com.firstticket.venueservice.domain.VenueRepository;
-import com.firstticket.venueservice.domain.exception.VenueErrorCode;
-import com.firstticket.venueservice.domain.exception.VenueException;
+import com.firstticket.venueservice.application.service.VenueQueryService;
 
 import lombok.RequiredArgsConstructor;
 
@@ -27,7 +24,6 @@ import lombok.RequiredArgsConstructor;
 @RequestMapping("/internal/v1/venues")
 public class VenueInternalController {
 
-    private final VenueRepository venueRepository;
     private final VenueQueryService venueQueryService;
 
     /**
@@ -37,9 +33,7 @@ public class VenueInternalController {
      */
     @GetMapping("/{venueId}/exists")
     public ResponseEntity<Void> checkVenueExists(@PathVariable UUID venueId) {
-        if (!venueRepository.existsById(venueId)) {
-            throw new VenueException(VenueErrorCode.VENUE_NOT_FOUND);
-        }
+        venueQueryService.validateVenueExists(venueId);
         return ResponseEntity.ok().build();
     }
 

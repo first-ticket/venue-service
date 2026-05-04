@@ -141,6 +141,40 @@ public class VenueQueryService {
     }
 
     /**
+     * 구역이 해당 공연장에 속하는지 검증한다.
+     * getSeats, getSeat, updateSeatStatus 호출 전 계층 관계를 확인한다.
+     */
+    public void validateSectionBelongsToVenue(UUID venueId, UUID sectionId) {
+        VenueResult venue = getVenue(venueId);
+        boolean belongs = venue.sections().stream()
+            .anyMatch(s -> s.id().equals(sectionId));
+        if (!belongs) {
+            throw new VenueException(VenueErrorCode.SECTION_NOT_FOUND);
+        }
+    }
+
+    /**
+     * 좌석이 해당 구역에 속하는지 검증한다.
+     */
+    public void validateSeatBelongsToSection(UUID sectionId, UUID seatId) {
+        VenueSeatResult seat = getSeat(seatId);
+        if (!seat.sectionId().equals(sectionId)) {
+            throw new VenueException(VenueErrorCode.SEAT_NOT_FOUND);
+        }
+    }
+
+    /**
+     * 공연장 존재 여부 확인.
+     * VenueInternalController에서 사용한다.
+     * Presentation 계층이 VenueRepository에 직접 의존하지 않도록 격리한다.
+     */
+    public void validateVenueExists(UUID venueId) {
+        if (!venueRepository.existsById(venueId)) {
+            throw new VenueException(VenueErrorCode.VENUE_NOT_FOUND);
+        }
+    }
+
+    /**
      * 목록 조회 쿼리 검증.
      * pageSize, pageNumber 범위 검증.
      */

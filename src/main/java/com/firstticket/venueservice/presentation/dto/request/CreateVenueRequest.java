@@ -7,6 +7,7 @@ import com.firstticket.venueservice.application.dto.command.CreateVenueCommand;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 
 /**
  * 공연장 등록 요청 DTO.
@@ -40,6 +41,7 @@ public record CreateVenueRequest(
         @NotBlank(message = "구역명은 필수입니다")
         String name,
 
+        @NotNull(message = "구역 타입은 필수입니다")
         com.firstticket.venueservice.domain.SeatType type,
 
         Integer rowCount,   // SEATED 전용

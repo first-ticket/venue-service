@@ -19,6 +19,7 @@ import com.firstticket.common.response.ApiResponse;
 import com.firstticket.common.response.CommonErrorCode;
 import com.firstticket.common.web.AuthContext;
 import com.firstticket.common.web.UserRole;
+import com.firstticket.venueservice.application.dto.command.CreateSectionCommand;
 import com.firstticket.venueservice.application.dto.command.UpdateVenueSeatStatusCommand;
 import com.firstticket.venueservice.application.dto.result.VenueResult;
 import com.firstticket.venueservice.application.dto.result.VenueSeatResult;
@@ -70,26 +71,20 @@ public class VenueController {
         checkHostOrAdmin();
         UUID requesterId = AuthContext.getUserId();
 
-        // 공연장 먼저 생성
-        VenueResult venueResult = venueCommandService.createVenue(
-            requesterId, request.toCommand()
-        );
+        // 단일 트랜잭션으로 공연장 + 구역 일괄 생성 — partial commit 방지
+        List<CreateSectionCommand> sectionCommands = request.sections() == null
+            ? List.of()
+            : request.sections().stream()
+            .map(s -> s.toCommand(UUID.randomUUID()))
+            .toList();
 
-        // sections가 있으면 구역 추가 (V-01, V-02)
-        if (request.sections() != null && !request.sections().isEmpty()) {
-            for (CreateVenueRequest.SectionRequest sectionRequest : request.sections()) {
-                venueCommandService.createSection(
-                    requesterId,
-                    sectionRequest.toCommand(venueResult.id())
-                );
-            }
-            // 구역 추가 후 sections 포함된 Venue 재조회
-            venueResult = venueQueryService.getVenue(venueResult.id());
-        }
+        VenueResult result = venueCommandService.createVenueWithSections(
+            requesterId, request.toCommand(), sectionCommands
+        );
 
         return ApiResponse.success(
             VenueSuccessCode.VENUE_CREATED,
-            VenueResponse.from(venueResult)
+            VenueResponse.from(result)
         );
     }
 
@@ -100,7 +95,7 @@ public class VenueController {
      */
     @GetMapping
     public ResponseEntity<ApiResponse<PagedResponse<VenueSummaryResponse>>> searchVenues(
-        @ModelAttribute SearchVenueRequest request) {
+        @ModelAttribute @Valid SearchVenueRequest request) {
         PagedResult<VenueSummaryResult> pagedResult =
             venueQueryService.searchVenues(request.toQuery());
 
@@ -250,6 +245,7 @@ public class VenueController {
     public ResponseEntity<ApiResponse<List<VenueSeatResponse>>> getSeats(
         @PathVariable UUID venueId,
         @PathVariable UUID sectionId) {
+        venueQueryService.validateSectionBelongsToVenue(venueId, sectionId);
         List<VenueSeatResult> results = venueQueryService.getSeatsBySection(sectionId);
         return ApiResponse.success(
             VenueSuccessCode.SEAT_LIST_FOUND,
@@ -266,6 +262,8 @@ public class VenueController {
         @PathVariable UUID venueId,
         @PathVariable UUID sectionId,
         @PathVariable UUID seatId) {
+        venueQueryService.validateSectionBelongsToVenue(venueId, sectionId);
+        venueQueryService.validateSeatBelongsToSection(sectionId, seatId);
         VenueSeatResult result = venueQueryService.getSeat(seatId);
         return ApiResponse.success(
             VenueSuccessCode.SEAT_FOUND,
@@ -285,6 +283,9 @@ public class VenueController {
         @PathVariable UUID sectionId,
         @PathVariable UUID seatId,
         @RequestBody @Valid UpdateSeatStatusRequest request) {
+        venueQueryService.validateSectionBelongsToVenue(venueId, sectionId);
+        venueQueryService.validateSeatBelongsToSection(sectionId, seatId);
+
         checkAdmin();
         UUID requesterId = AuthContext.getUserId();
 

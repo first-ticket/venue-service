@@ -59,6 +59,52 @@ public class VenueCommandService {
         return VenueResult.from(venueRepository.save(venue));
     }
 
+    /**
+     * 공연장 + 구역 일괄 생성.
+     * 단일 트랜잭션 안에서 공연장 생성 → 구역 추가 → VenueSeat 생성을 처리한다.
+     * Controller에서 분산된 호출을 하나로 통합하여 partial commit 방지.
+     */
+    @Transactional
+    public VenueResult createVenueWithSections(UUID requesterId,
+        CreateVenueCommand venueCommand,
+        List<CreateSectionCommand> sectionCommands) {
+        validateRequesterId(requesterId);
+        validateCreateVenueCommand(venueCommand);
+
+        // 공연장 생성
+        Venue venue = Venue.create(venueCommand.name(), venueCommand.address());
+        venueRepository.save(venue);
+
+        // 구역 추가 — 각 구역의 커맨드를 venueId로 재구성
+        if (sectionCommands != null && !sectionCommands.isEmpty()) {
+            for (CreateSectionCommand sectionCommand : sectionCommands) {
+                CreateSectionCommand withVenueId = new CreateSectionCommand(
+                    venue.getId(),           // ← 저장된 venueId 주입
+                    sectionCommand.name(),
+                    sectionCommand.type(),
+                    sectionCommand.rowCount(),
+                    sectionCommand.colCount(),
+                    sectionCommand.capacity()
+                );
+                validateCreateSectionCommand(withVenueId);
+                Section section = venue.addSection(
+                    withVenueId.type(),
+                    withVenueId.name(),
+                    withVenueId.rowCount(),
+                    withVenueId.colCount(),
+                    withVenueId.capacity()
+                );
+                // SEATED 타입: VenueSeat 일괄 생성
+                if (sectionCommand.type() == SeatType.SEATED) {
+                    venueSeatRepository.saveAll(createSeats(section));
+                }
+            }
+            venueRepository.save(venue);
+        }
+
+        return VenueResult.from(venue);
+    }
+
     // -------- 공연장 수정 -----------------------------------------
 
     /**
