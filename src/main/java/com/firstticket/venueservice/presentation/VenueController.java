@@ -284,11 +284,11 @@ public class VenueController {
         @PathVariable UUID sectionId,
         @PathVariable UUID seatId,
         @RequestBody @Valid UpdateSeatStatusRequest request) {
-        venueQueryService.validateSectionBelongsToVenue(venueId, sectionId);
-        venueQueryService.validateSeatBelongsToSection(sectionId, seatId);
-
         checkAdmin();
         UUID requesterId = AuthContext.getUserId();
+
+        venueQueryService.validateSectionBelongsToVenue(venueId, sectionId);
+        venueQueryService.validateSeatBelongsToSection(sectionId, seatId);
 
         UpdateVenueSeatStatusCommand command = request.toCommand(seatId);
         VenueSeatResult result = command.broken()
