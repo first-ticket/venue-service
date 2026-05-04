@@ -75,6 +75,7 @@ public class VenueCommandService {
         Venue venue = Venue.create(venueCommand.name(), venueCommand.address());
         venueRepository.save(venue);
 
+        List<Section> seatedSections = new java.util.ArrayList<>();
         // 구역 추가 — 각 구역의 커맨드를 venueId로 재구성
         if (sectionCommands != null && !sectionCommands.isEmpty()) {
             for (CreateSectionCommand sectionCommand : sectionCommands) {
@@ -94,12 +95,14 @@ public class VenueCommandService {
                     withVenueId.colCount(),
                     withVenueId.capacity()
                 );
-                // SEATED 타입: VenueSeat 일괄 생성
-                if (sectionCommand.type() == SeatType.SEATED) {
-                    venueSeatRepository.saveAll(createSeats(section));
+                if (section.getType() == SeatType.SEATED) {
+                    seatedSections.add(section);
                 }
             }
             venueRepository.save(venue);
+            for (Section section : seatedSections) {
+                venueSeatRepository.saveAll(createSeats(section));
+            }
         }
 
         return VenueResult.from(venue);
