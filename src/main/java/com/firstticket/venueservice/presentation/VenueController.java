@@ -79,7 +79,7 @@ public class VenueController {
                 s.rowCount(), s.colCount(), s.capacity()))
             .toList();
 
-        VenueResult result = venueCommandService.createVenueWithSections(
+        VenueResult result = venueCommandService.createVenue(
             requesterId, request.toCommand(), sections
         );
 
