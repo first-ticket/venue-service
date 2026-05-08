@@ -1,5 +1,5 @@
 # ──────────────────────────────────────────
-# application.yml (공통 기본값)
+# application.yml (로컬 공통 기본값)
 # ──────────────────────────────────────────
 spring:
     application:
@@ -10,42 +10,27 @@ spring:
             enabled: true
 
     config:
-        import: "optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}"
+        import:
+            - "optional:file:.env[.properties]"
+            - "optional:configserver:"
 
     cloud:
         config:
             username: ${CONFIG_SERVER_USERNAME}
             password: ${CONFIG_SERVER_PASSWORD}
+            discovery:
+                enabled: true
+                service-id: config-server
 
     profiles:
         active: local
 
     jpa:
-        open-in-view: false
+        hibernate:
+            ddl-auto: create-drop
         properties:
             hibernate:
-                default_schema: program
-                format_sql: true
-        hibernate:
-            ddl-auto: validate
-
-    kafka:
-        producer:
-            key-serializer: org.apache.kafka.common.serialization.StringSerializer
-            value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
-            properties:
-                spring.json.add.type.headers: false
-        consumer:
-            key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-            value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
-            properties:
-                spring.json.trusted.packages: "com.firstticket.*"
-
-    security:
-        oauth2:
-            resourceserver:
-                jwt:
-                    issuer-uri: ${KEYCLOAK_ISSUER_URI}
+                show_sql: true
 
 server:
     port: 8086
@@ -56,6 +41,8 @@ eureka:
     client:
         register-with-eureka: true
         fetch-registry: true
+        service-url:
+            defaultZone: http://${EUREKA_SERVER_URL:localhost}:8761/eureka/
 
 management:
     endpoints:

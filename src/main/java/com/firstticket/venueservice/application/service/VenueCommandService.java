@@ -2,7 +2,6 @@ package com.firstticket.venueservice.application.service;
 
 import static com.firstticket.venueservice.domain.SeatType.*;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -18,7 +17,6 @@ import com.firstticket.venueservice.application.dto.command.UpdateVenueCommand;
 import com.firstticket.venueservice.application.dto.command.UpdateVenueSeatStatusCommand;
 import com.firstticket.venueservice.application.dto.result.VenueResult;
 import com.firstticket.venueservice.application.dto.result.VenueSeatResult;
-import com.firstticket.venueservice.domain.SeatType;
 import com.firstticket.venueservice.domain.Section;
 import com.firstticket.venueservice.domain.Venue;
 import com.firstticket.venueservice.domain.VenueRepository;
@@ -51,30 +49,12 @@ public class VenueCommandService {
     // ---- 공연장 생성 -------------------------------------
 
     /**
-     * 공연장 생성.
-     * 새로 생성된 Venue는 sections가 빈 리스트로 초기화되므로
-     * findByIdWithSections() 없이 바로 반환한다.
-     */
-    public VenueResult createVenue(UUID requesterId, CreateVenueCommand command) {
-        validateRequesterId(requesterId);
-        validateCreateVenueCommand(command);
-
-        Venue venue = Venue.create(command.name(), command.address());
-        return VenueResult.from(venueRepository.save(venue));
-    }
-
-    /**
-     * 공연장 + 구역 일괄 생성.
-     * 단일 트랜잭션 안에서 공연장 생성 → 구역 추가 → VenueSeat 생성을 처리한다.
-     * Controller에서 분산된 호출을 하나로 통합하여 partial commit 방지.
-     */
-    /**
      * 공연장 + 구역 일괄 생성.
      * 단일 트랜잭션 안에서 공연장 생성 → 구역 추가 → VenueSeat 생성을 처리한다.
      * Controller에서 분산된 호출을 하나로 통합하여 partial commit을 방지한다.
      */
     @Transactional
-    public VenueResult createVenueWithSections(UUID requesterId,
+    public VenueResult createVenue(UUID requesterId,
         CreateVenueCommand venueCommand,
         List<SectionCreationInfo> sections) {
         validateRequesterId(requesterId);
@@ -89,28 +69,24 @@ public class VenueCommandService {
             return VenueResult.from(venue);
         }
 
-        // 구역 추가 및 SEATED 타입 VenueSeat 일괄 생성
-        List<VenueSeat> seatsToSave = new ArrayList<>();
-
+        // 1단계: 검증 후 Section만 추가 (save 전이므로 section.getId() = null)
         for (SectionCreationInfo info : sections) {
             validateSectionCreationInfo(info);
-
-            // venue.addSection()이 Venue 객체를 직접 참조하므로
-            // venueId를 별도로 주입할 필요 없음
-            Section section = venue.addSection(
-                info.type(),
-                info.name(),
-                info.rowCount(),
-                info.colCount(),
-                info.capacity()
+            venue.addSection(
+                info.type(), info.name(),
+                info.rowCount(), info.colCount(), info.capacity()
             );
-
-            if (info.type() == SEATED) {
-                seatsToSave.addAll(createSeats(section));
-            }
         }
 
+        // 2단계: save → cascade로 Section도 DB 저장 → section.getId() 할당됨
         venueRepository.save(venue);
+
+        // 3단계: save 이후 venue.getSections()에서 id를 읽어 VenueSeat 생성
+        //        → section.getId()가 null이 아님이 보장됨
+        List<VenueSeat> seatsToSave = venue.getSections().stream()
+            .filter(section -> section.getType() == SEATED)
+            .flatMap(section -> createSeats(section).stream())
+            .toList();
 
         if (!seatsToSave.isEmpty()) {
             venueSeatRepository.saveAll(seatsToSave);
