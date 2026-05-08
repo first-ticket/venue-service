@@ -23,7 +23,6 @@ public enum VenueSuccessCode implements SuccessCode {
     SECTION_DELETED(HttpStatus.NO_CONTENT, "구역이 삭제되었습니다"),
     SECTION_FOUND(HttpStatus.OK, "구역을 조회했습니다"),
     SECTION_LIST_FOUND(HttpStatus.OK, "구역 목록을 조회했습니다"),
-    SECTION_CAPACITY_OK(HttpStatus.OK, "구역 수용 인원을 조회했습니다"),
 
     // ----- VenueSeat ------------------------------------------
     SEAT_FOUND(HttpStatus.OK, "좌석을 조회했습니다"),
