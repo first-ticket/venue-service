@@ -8,7 +8,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.firstticket.venueservice.application.dto.query.VenueSearchQuery;
-import com.firstticket.venueservice.application.dto.result.SectionCapacityResult;
 import com.firstticket.venueservice.application.dto.result.SectionValidationResult;
 import com.firstticket.venueservice.application.dto.result.VenueResult;
 import com.firstticket.venueservice.application.dto.result.VenueSeatResult;
@@ -98,20 +97,6 @@ public class VenueQueryService {
         VenueSeat seat = venueSeatRepository.findById(seatId)
             .orElseThrow(() -> new VenueException(VenueErrorCode.SEAT_NOT_FOUND));
         return VenueSeatResult.from(seat);
-    }
-
-    /**
-     * Section 수용 인원 상한 조회.
-     * Program Service의 VenueClient가 호출하는 내부 API에서 사용한다.
-     * SEATED: rowCount × colCount
-     * STANDING·FREE: capacity
-     */
-    public SectionCapacityResult getSectionCapacity(UUID sectionId) {
-        validateSectionId(sectionId);
-
-        Section section = sectionQueryRepository.findById(sectionId)
-            .orElseThrow(() -> new VenueException(VenueErrorCode.SECTION_NOT_FOUND));
-        return SectionCapacityResult.from(section);
     }
 
     // ----- private 검증 메서드 ------------------------------------------
