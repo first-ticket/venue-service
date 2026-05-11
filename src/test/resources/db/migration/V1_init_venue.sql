@@ -23,7 +23,7 @@ CREATE TABLE p_venue
     CONSTRAINT pk_venue PRIMARY KEY (id)
 );
 
-CREATE INDEX idx_venue_name ON p_venue (name);
+CREATE INDEX idx_venue_name ON program.p_venue (name);
 
 
 CREATE TABLE p_section
