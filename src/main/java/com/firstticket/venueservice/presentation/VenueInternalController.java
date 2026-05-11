@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.firstticket.venueservice.application.dto.result.SectionValidationResult;
+import com.firstticket.venueservice.application.dto.result.VenueInfoResult;
 import com.firstticket.venueservice.application.dto.result.VenueValidationResult;
 import com.firstticket.venueservice.application.service.VenueQueryService;
 import com.firstticket.venueservice.domain.SeatType;
@@ -62,5 +63,17 @@ public class VenueInternalController {
         @PathVariable UUID venueId,
         @PathVariable UUID sectionId) {
         return venueQueryService.getSectionValidation(venueId, sectionId);
+    }
+
+    /**
+     * 공연장 기본 정보 조회 (내부 전용).
+     * Program Service의 getScheduleBookingInfo() 에서
+     * venueName·venueAddress 조회를 위해 호출한다.
+     *
+     * @param venueId 조회할 공연장 ID
+     */
+    @GetMapping("/{venueId}/info")
+    public VenueInfoResult getVenueInfo(@PathVariable UUID venueId) {
+        return venueQueryService.getVenueInfo(venueId);
     }
 }

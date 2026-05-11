@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.firstticket.venueservice.application.dto.query.VenueSearchQuery;
 import com.firstticket.venueservice.application.dto.result.SectionValidationResult;
+import com.firstticket.venueservice.application.dto.result.VenueInfoResult;
 import com.firstticket.venueservice.application.dto.result.VenueResult;
 import com.firstticket.venueservice.application.dto.result.VenueSeatResult;
 import com.firstticket.venueservice.application.dto.result.VenueSummaryResult;
@@ -52,6 +53,22 @@ public class VenueQueryService {
         Venue venue = venueRepository.findByIdWithSections(venueId)
             .orElseThrow(() -> new VenueException(VenueErrorCode.VENUE_NOT_FOUND));
         return VenueResult.from(venue);
+    }
+
+    /**
+     * 공연장 기본 정보 조회.
+     * Program Service의 getScheduleBookingInfo() 에서 호출한다.
+     * sections 불필요 — findById() 사용.
+     *
+     * @param venueId 조회할 공연장 ID
+     */
+    public VenueInfoResult getVenueInfo(UUID venueId) {
+        validateVenueId(venueId);
+
+        Venue venue = venueRepository.findById(venueId)
+            .orElseThrow(() -> new VenueException(VenueErrorCode.VENUE_NOT_FOUND));
+
+        return VenueInfoResult.from(venue);
     }
 
     /**
