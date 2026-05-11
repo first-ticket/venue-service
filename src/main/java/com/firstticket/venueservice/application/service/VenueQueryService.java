@@ -165,12 +165,15 @@ public class VenueQueryService {
 
     /**
      * venue 검증 묶음 조회.
-     * venue 존재 여부 확인 + 해당 seatType 구역의 전체 수용량 합산을 한 번에 처리한다.
-     * Program Service의 createSchedule() 에서 Feign 호출 수를 줄이기 위해 도입한다.
+     * venue 존재 확인 + 해당 seatType 구역의 전체 수용량 합산 +
+     * 구역 목록을 한 번에 처리한다.
      *
      * venue가 존재하지 않으면 VENUE_NOT_FOUND 예외를 던진다.
      * seatType이 입력되지 않으면 INVALID_SECTION_TYPE 예외를 던진다.
      * 해당 seatType의 구역이 하나도 없으면 totalCapacity = 0을 반환한다.
+     * sections: Program Service의 ScheduleCreatedEvent seatTemplates 구성에 사용.
+     * totalCapacity: createSchedule() 시 totalCapacity 상한 검증에 사용.
+     * 해당 seatType의 구역이 하나도 없으면 totalCapacity = 0, sections = [] 반환.
      *
      * @param venueId  검증할 공연장 ID
      * @param seatType 프로그램 타입에 대응하는 구역 타입 (SEATED·STANDING·FREE)
@@ -179,22 +182,28 @@ public class VenueQueryService {
     public VenueValidationResult getVenueValidation(UUID venueId, SeatType seatType) {
         validateVenueId(venueId);
 
-        if (Objects.isNull(seatType))
+        if (Objects.isNull(seatType)) {
             throw new VenueException(VenueErrorCode.INVALID_SECTION_TYPE);
+        }
 
-        // venue 존재 확인 + sections 함께 로딩 (N+1 방지)
         Venue venue = venueRepository.findByIdWithSections(venueId)
             .orElseThrow(() -> new VenueException(VenueErrorCode.VENUE_NOT_FOUND));
 
-        // 해당 seatType 구역의 전체 수용량 합산
-        // SEATED   : rowCount × colCount (getSeatCount() 내부에서 처리)
-        // STANDING·FREE : capacity (getSeatCount() 내부에서 처리)
-        int totalCapacity = venue.getSections().stream()
+        // 해당 seatType 구역만 필터링
+        List<Section> matchingSections = venue.getSections().stream()
             .filter(s -> s.getType() == seatType)
+            .toList();
+
+        int totalCapacity = matchingSections.stream()
             .mapToInt(Section::getSeatCount)
             .sum();
 
-        return new VenueValidationResult(totalCapacity);
+        // seatTemplates 구성용 구역 목록
+        List<VenueValidationResult.SectionInfo> sections = matchingSections.stream()
+            .map(VenueValidationResult.SectionInfo::from)
+            .toList();
+
+        return new VenueValidationResult(totalCapacity, sections);
     }
 
     /**
