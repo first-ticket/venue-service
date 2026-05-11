@@ -2,15 +2,16 @@ package com.firstticket.venueservice.presentation;
 
 import java.util.UUID;
 
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.firstticket.common.response.ApiResponse;
-import com.firstticket.venueservice.application.dto.result.SectionCapacityResult;
+import com.firstticket.venueservice.application.dto.result.SectionValidationResult;
+import com.firstticket.venueservice.application.dto.result.VenueValidationResult;
 import com.firstticket.venueservice.application.service.VenueQueryService;
+import com.firstticket.venueservice.domain.SeatType;
 
 import lombok.RequiredArgsConstructor;
 
@@ -18,6 +19,9 @@ import lombok.RequiredArgsConstructor;
  * Venue Service 내부 API Controller.
  * Program Service의 VenueClient(Feign)가 호출하는 내부 전용 엔드포인트.
  * 외부 사용자에게 노출하지 않는다.
+ *
+ * 기존 개별 엔드포인트 (/exists, /capacity, /sections/{id}/capacity, /sections/{id}/type)를
+ * 검증 묶음 2개로 통합하여 서비스 간 Feign 호출 수를 줄인다.
  */
 @RestController
 @RequiredArgsConstructor
@@ -27,24 +31,36 @@ public class VenueInternalController {
     private final VenueQueryService venueQueryService;
 
     /**
-     * 공연장 존재 여부 확인.
-     * Program Service의 스케줄 등록 시 공연장 존재 여부를 확인한다.
-     * 존재하면 200, 존재하지 않으면 404를 반환한다.
+     * venue 검증 묶음 (venue 존재 확인 + 타입별 전체 수용량).
+     * Program Service의 createSchedule() 에서 호출한다.
+     *
+     * venue가 존재하지 않으면 404를 반환한다.
+     * 존재하면 해당 seatType 구역의 전체 수용량 합산을 반환한다.
+     *
+     * @param venueId  공연장 ID
+     * @param seatType 프로그램 타입에 대응하는 구역 타입 (SEATED·STANDING·FREE)
      */
-    @GetMapping("/{venueId}/exists")
-    public ResponseEntity<Void> checkVenueExists(@PathVariable UUID venueId) {
-        venueQueryService.validateVenueExists(venueId);
-        return ResponseEntity.ok().build();
+    @GetMapping("/{venueId}/validation")
+    public VenueValidationResult getVenueValidation(
+        @PathVariable UUID venueId,
+        @RequestParam SeatType seatType) {
+        return venueQueryService.getVenueValidation(venueId, seatType);
     }
 
     /**
-     * Section 수용 인원 상한 조회.
-     * Program Service의 addSectionCapacity() 호출 전 상한 검증에 사용한다.
+     * section 검증 묶음 (소속 확인 + seatType + capacity).
+     * Program Service의 addPriceGrade() / addSectionCapacity() 에서 호출한다.
+     *
+     * sectionId가 venueId 소속이 아니면 404를 반환한다.
+     * 소속이 맞으면 seatType과 capacity를 함께 반환한다.
+     *
+     * @param venueId   소속 공연장 ID
+     * @param sectionId 검증할 구역 ID
      */
-    @GetMapping("/sections/{sectionId}/capacity")
-    public ResponseEntity<ApiResponse<SectionCapacityResult>> getSectionCapacity(
+    @GetMapping("/{venueId}/sections/{sectionId}/validation")
+    public SectionValidationResult getSectionValidation(
+        @PathVariable UUID venueId,
         @PathVariable UUID sectionId) {
-        SectionCapacityResult result = venueQueryService.getSectionCapacity(sectionId);
-        return ApiResponse.success(VenueSuccessCode.SECTION_CAPACITY_OK, result);
+        return venueQueryService.getSectionValidation(venueId, sectionId);
     }
 }

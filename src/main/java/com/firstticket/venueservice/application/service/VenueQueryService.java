@@ -1,6 +1,7 @@
 package com.firstticket.venueservice.application.service;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
@@ -8,9 +9,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.firstticket.venueservice.application.dto.query.VenueSearchQuery;
 import com.firstticket.venueservice.application.dto.result.SectionCapacityResult;
+import com.firstticket.venueservice.application.dto.result.SectionValidationResult;
 import com.firstticket.venueservice.application.dto.result.VenueResult;
 import com.firstticket.venueservice.application.dto.result.VenueSeatResult;
 import com.firstticket.venueservice.application.dto.result.VenueSummaryResult;
+import com.firstticket.venueservice.application.dto.result.VenueValidationResult;
+import com.firstticket.venueservice.domain.SeatType;
 import com.firstticket.venueservice.domain.Section;
 import com.firstticket.venueservice.domain.Venue;
 import com.firstticket.venueservice.domain.VenueRepository;
@@ -172,6 +176,68 @@ public class VenueQueryService {
         if (!venueRepository.existsById(venueId)) {
             throw new VenueException(VenueErrorCode.VENUE_NOT_FOUND);
         }
+    }
+
+    /**
+     * venue 검증 묶음 조회.
+     * venue 존재 여부 확인 + 해당 seatType 구역의 전체 수용량 합산을 한 번에 처리한다.
+     * Program Service의 createSchedule() 에서 Feign 호출 수를 줄이기 위해 도입한다.
+     *
+     * venue가 존재하지 않으면 VENUE_NOT_FOUND 예외를 던진다.
+     * seatType이 입력되지 않으면 INVALID_SECTION_TYPE 예외를 던진다.
+     * 해당 seatType의 구역이 하나도 없으면 totalCapacity = 0을 반환한다.
+     *
+     * @param venueId  검증할 공연장 ID
+     * @param seatType 프로그램 타입에 대응하는 구역 타입 (SEATED·STANDING·FREE)
+     *
+     */
+    public VenueValidationResult getVenueValidation(UUID venueId, SeatType seatType) {
+        validateVenueId(venueId);
+
+        if (Objects.isNull(seatType))
+            throw new VenueException(VenueErrorCode.INVALID_SECTION_TYPE);
+
+        // venue 존재 확인 + sections 함께 로딩 (N+1 방지)
+        Venue venue = venueRepository.findByIdWithSections(venueId)
+            .orElseThrow(() -> new VenueException(VenueErrorCode.VENUE_NOT_FOUND));
+
+        // 해당 seatType 구역의 전체 수용량 합산
+        // SEATED   : rowCount × colCount (getSeatCount() 내부에서 처리)
+        // STANDING·FREE : capacity (getSeatCount() 내부에서 처리)
+        int totalCapacity = venue.getSections().stream()
+            .filter(s -> s.getType() == seatType)
+            .mapToInt(Section::getSeatCount)
+            .sum();
+
+        return new VenueValidationResult(totalCapacity);
+    }
+
+    /**
+     * section 검증 묶음 조회.
+     * section 소속 venue 확인 + seatType + capacity를 한 번에 처리한다.
+     * Program Service의 addPriceGrade() / addSectionCapacity() 에서
+     * Feign 호출 수를 줄이기 위해 도입한다.
+     *
+     * sectionId가 venueId 소속이 아니면 SECTION_NOT_FOUND 예외를 던진다.
+     *
+     * @param venueId   소속 공연장 ID
+     * @param sectionId 검증할 구역 ID
+     */
+    public SectionValidationResult getSectionValidation(UUID venueId, UUID sectionId) {
+        validateVenueId(venueId);
+        validateSectionId(sectionId);
+
+        // venue + sections 함께 로딩 후 소속 여부 확인
+        Venue venue = venueRepository.findByIdWithSections(venueId)
+            .orElseThrow(() -> new VenueException(VenueErrorCode.VENUE_NOT_FOUND));
+
+        Section section = venue.getSections().stream()
+            .filter(s -> s.getId().equals(sectionId))
+            .findFirst()
+            .orElseThrow(() -> new VenueException(VenueErrorCode.SECTION_NOT_FOUND));
+
+        // getSeatCount(): SEATED → rowCount × colCount / STANDING·FREE → capacity
+        return new SectionValidationResult(section.getType(), section.getSeatCount());
     }
 
     /**
