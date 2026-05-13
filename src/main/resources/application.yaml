@@ -5,10 +5,6 @@ spring:
     application:
         name: venue-service
 
-    threads:
-        virtual:
-            enabled: true
-
     config:
         import:
             - "optional:file:.env[.properties]"
@@ -25,16 +21,6 @@ spring:
     profiles:
         active: local
 
-    jpa:
-        hibernate:
-            ddl-auto: create-drop
-        properties:
-            hibernate:
-                show_sql: true
-
-server:
-    port: 8086
-
 eureka:
     instance:
         prefer-ip-address: true
@@ -43,15 +29,3 @@ eureka:
         fetch-registry: true
         service-url:
             defaultZone: http://${EUREKA_SERVER_URL:localhost}:8761/eureka/
-
-management:
-    endpoints:
-        web:
-            exposure:
-                include: health, info, prometheus, metrics
-    endpoint:
-        health:
-            show-details: always
-    tracing:
-        sampling:
-            probability: 1.0
