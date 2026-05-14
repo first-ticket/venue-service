@@ -1,7 +1,7 @@
 -- =====================================================
 -- Venue Service — V1 초기 스키마
--- schema: program
--- Spring 설정: spring.jpa.properties.hibernate.default_schema=program
+-- schema: program_schema
+-- Spring 설정: spring.jpa.properties.hibernate.default_schema=program_schema
 -- =====================================================
 
 
@@ -23,13 +23,8 @@ CREATE TABLE IF NOT EXISTS p_venue
     CONSTRAINT pk_venue PRIMARY KEY (id)
     );
 
--- 공연장명 검색 인덱스
--- partial index: soft delete된 레코드 제외
-DO $$ BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_class c JOIN pg_namespace n ON c.relnamespace = n.oid WHERE c.relname = 'idx_venue_name' AND n.nspname = 'program') THEN
-CREATE INDEX idx_venue_name ON program.p_venue (name) WHERE deleted_at IS NULL;
-END IF;
-END $$;
+-- 공연장명 검색 인덱스 (partial index: soft delete된 레코드 제외)
+CREATE INDEX IF NOT EXISTS idx_venue_name ON p_venue (name) WHERE deleted_at IS NULL;
 
 
 -- ── p_section ─────────────────────────────────────────
@@ -76,8 +71,7 @@ CREATE TABLE IF NOT EXISTS p_section
     CHECK (type != 'SEATED'
            OR (row_count IS NOT NULL AND col_count IS NOT NULL
            AND row_count > 0 AND col_count > 0
-           AND capacity IS NULL)
-    ) ,
+           AND capacity IS NULL)),
 
     -- STANDING: capacity 필수 / rowCount, colCount null
     CONSTRAINT chk_section_standing
@@ -93,11 +87,7 @@ CREATE TABLE IF NOT EXISTS p_section
     );
 
 -- 공연장별 구역 조회 인덱스
-DO $$ BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_class c JOIN pg_namespace n ON c.relnamespace = n.oid WHERE c.relname = 'idx_section_venue_id' AND n.nspname = 'program') THEN
-CREATE INDEX idx_section_venue_id ON program.p_section (venue_id) WHERE deleted_at IS NULL;
-END IF;
-END $$;
+CREATE INDEX IF NOT EXISTS idx_section_venue_id ON p_section (venue_id) WHERE deleted_at IS NULL;
 
 
 -- ── p_venue_seat ──────────────────────────────────────
@@ -149,12 +139,8 @@ CREATE TABLE IF NOT EXISTS p_venue_seat
 
 -- 구역별 좌석 조회 인덱스, 물리 상태별 필터 인덱스
 -- CreateSectionUseCase에서 VenueSeat 일괄 생성 후 조회 시 사용
+CREATE INDEX IF NOT EXISTS idx_venue_seat_section_id ON p_venue_seat (section_id) WHERE deleted_at IS NULL;
+
+-- 물리 상태별 필터 인덱스
 -- isAvailable() 선검증 쿼리에서 사용
-DO $$ BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_class c JOIN pg_namespace n ON c.relnamespace = n.oid WHERE c.relname = 'idx_venue_seat_section_id' AND n.nspname = 'program') THEN
-CREATE INDEX idx_venue_seat_section_id ON program.p_venue_seat (section_id) WHERE deleted_at IS NULL;
-END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_class c JOIN pg_namespace n ON c.relnamespace = n.oid WHERE c.relname = 'idx_venue_seat_physical_status' AND n.nspname = 'program') THEN
-CREATE INDEX idx_venue_seat_physical_status ON program.p_venue_seat (physical_status) WHERE deleted_at IS NULL;
-END IF;
-END $$;
+CREATE INDEX IF NOT EXISTS idx_venue_seat_physical_status ON p_venue_seat (physical_status) WHERE deleted_at IS NULL;
