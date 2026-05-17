@@ -1,0 +1,339 @@
+= Venue Service API 문서
+:doctype: book
+:icons: font
+:source-highlighter: highlightjs
+:toc: left
+:toc-title: 목차
+:toclevels: 3
+:sectlinks:
+:snippets: ../../../build/generated-snippets
+
+== 공연장 (Venue)
+
+=== 공연장 등록
+
+`POST /api/v1/venues`
+
+HOST 또는 ADMIN 역할만 요청할 수 있습니다.
+SEATED 타입 구역을 포함하면 VenueSeat이 자동으로 생성됩니다.
+
+==== 요청 헤더
+include::{snippets}/venue/create/request-headers.adoc[]
+
+==== 요청 본문
+include::{snippets}/venue/create/request-fields.adoc[]
+
+==== 요청 예시
+include::{snippets}/venue/create/http-request.adoc[]
+
+==== 응답 필드
+include::{snippets}/venue/create/response-fields.adoc[]
+
+==== 응답 예시
+include::{snippets}/venue/create/http-response.adoc[]
+
+==== 오류 — 입력값 유효성 오류 (400)
+include::{snippets}/venue/create-400/http-request.adoc[]
+include::{snippets}/venue/create-400/http-response.adoc[]
+
+==== 오류 — 권한 없음 (403)
+include::{snippets}/venue/create-403/http-request.adoc[]
+include::{snippets}/venue/create-403/http-response.adoc[]
+
+'''
+
+=== 공연장 목록 조회
+
+`GET /api/v1/venues`
+
+모든 역할이 요청할 수 있습니다.
+이름·주소 키워드 OR 검색을 지원합니다.
+
+==== 요청 파라미터
+include::{snippets}/venue/search/query-parameters.adoc[]
+
+==== 요청 예시
+include::{snippets}/venue/search/http-request.adoc[]
+
+==== 응답 필드
+include::{snippets}/venue/search/response-fields.adoc[]
+
+==== 응답 예시
+include::{snippets}/venue/search/http-response.adoc[]
+
+'''
+
+=== 공연장 상세 조회
+
+`GET /api/v1/venues/{venueId}`
+
+모든 역할이 요청할 수 있습니다.
+
+==== 경로 파라미터
+include::{snippets}/venue/get/path-parameters.adoc[]
+
+==== 요청 예시
+include::{snippets}/venue/get/http-request.adoc[]
+
+==== 응답 필드
+include::{snippets}/venue/get/response-fields.adoc[]
+
+==== 응답 예시
+include::{snippets}/venue/get/http-response.adoc[]
+
+==== 오류 — 공연장 없음 (404)
+include::{snippets}/venue/get-404/http-request.adoc[]
+include::{snippets}/venue/get-404/http-response.adoc[]
+
+'''
+
+=== 공연장 수정
+
+`PATCH /api/v1/venues/{venueId}`
+
+HOST 또는 ADMIN 역할만 요청할 수 있습니다.
+null 필드는 기존 값을 유지합니다.
+
+==== 요청 헤더
+include::{snippets}/venue/update/request-headers.adoc[]
+
+==== 경로 파라미터
+include::{snippets}/venue/update/path-parameters.adoc[]
+
+==== 요청 본문
+include::{snippets}/venue/update/request-fields.adoc[]
+
+==== 요청 예시
+include::{snippets}/venue/update/http-request.adoc[]
+
+==== 응답 필드
+include::{snippets}/venue/update/response-fields.adoc[]
+
+==== 응답 예시
+include::{snippets}/venue/update/http-response.adoc[]
+
+==== 오류 — 공연장 없음 (404)
+include::{snippets}/venue/update-404/http-request.adoc[]
+include::{snippets}/venue/update-404/http-response.adoc[]
+
+'''
+
+=== 공연장 삭제
+
+`DELETE /api/v1/venues/{venueId}`
+
+ADMIN 역할만 요청할 수 있습니다.
+활성 프로그램이 있는 공연장은 삭제할 수 없습니다.
+
+==== 요청 헤더
+include::{snippets}/venue/delete/request-headers.adoc[]
+
+==== 경로 파라미터
+include::{snippets}/venue/delete/path-parameters.adoc[]
+
+==== 요청 예시
+include::{snippets}/venue/delete/http-request.adoc[]
+
+==== 응답 예시
+include::{snippets}/venue/delete/http-response.adoc[]
+
+==== 오류 — 활성 프로그램 있음 (409)
+include::{snippets}/venue/delete-409/http-request.adoc[]
+include::{snippets}/venue/delete-409/http-response.adoc[]
+
+==== 오류 — 권한 없음 (403)
+include::{snippets}/venue/delete-403/http-request.adoc[]
+include::{snippets}/venue/delete-403/http-response.adoc[]
+
+'''
+
+== 구역 (Section)
+
+=== 구역 등록
+
+`POST /api/v1/venues/{venueId}/sections`
+
+HOST 또는 ADMIN 역할만 요청할 수 있습니다.
+
+==== SEATED 타입
+include::{snippets}/venue/section/create-seated/request-headers.adoc[]
+
+===== 경로 파라미터
+include::{snippets}/venue/section/create-seated/path-parameters.adoc[]
+
+===== 요청 본문
+include::{snippets}/venue/section/create-seated/request-fields.adoc[]
+
+===== 요청 예시
+include::{snippets}/venue/section/create-seated/http-request.adoc[]
+
+===== 응답 예시
+include::{snippets}/venue/section/create-seated/http-response.adoc[]
+
+==== STANDING 타입
+include::{snippets}/venue/section/create-standing/http-request.adoc[]
+include::{snippets}/venue/section/create-standing/http-response.adoc[]
+
+==== 오류 — 입력값 유효성 오류 (400)
+include::{snippets}/venue/section/create-400/http-request.adoc[]
+include::{snippets}/venue/section/create-400/http-response.adoc[]
+
+'''
+
+=== 구역 목록 조회
+
+`GET /api/v1/venues/{venueId}/sections`
+
+모든 역할이 요청할 수 있습니다.
+
+==== 경로 파라미터
+include::{snippets}/venue/section/list/path-parameters.adoc[]
+
+==== 요청 예시
+include::{snippets}/venue/section/list/http-request.adoc[]
+
+==== 응답 필드
+include::{snippets}/venue/section/list/response-fields.adoc[]
+
+==== 응답 예시
+include::{snippets}/venue/section/list/http-response.adoc[]
+
+'''
+
+=== 구역 상세 조회
+
+`GET /api/v1/venues/{venueId}/sections/{sectionId}`
+
+모든 역할이 요청할 수 있습니다.
+
+==== 경로 파라미터
+include::{snippets}/venue/section/get/path-parameters.adoc[]
+
+==== 요청 예시
+include::{snippets}/venue/section/get/http-request.adoc[]
+
+==== 응답 필드
+include::{snippets}/venue/section/get/response-fields.adoc[]
+
+==== 응답 예시
+include::{snippets}/venue/section/get/http-response.adoc[]
+
+==== 오류 — 구역 없음 (404)
+include::{snippets}/venue/section/get-404/http-request.adoc[]
+include::{snippets}/venue/section/get-404/http-response.adoc[]
+
+'''
+
+=== 구역 삭제
+
+`DELETE /api/v1/venues/{venueId}/sections/{sectionId}`
+
+ADMIN 역할만 요청할 수 있습니다.
+SEATED 타입 구역 삭제 시 연관 VenueSeat이 일괄 삭제됩니다.
+
+==== 요청 헤더
+include::{snippets}/venue/section/delete/request-headers.adoc[]
+
+==== 경로 파라미터
+include::{snippets}/venue/section/delete/path-parameters.adoc[]
+
+==== 요청 예시
+include::{snippets}/venue/section/delete/http-request.adoc[]
+
+==== 응답 예시
+include::{snippets}/venue/section/delete/http-response.adoc[]
+
+==== 오류 — 권한 없음 (403)
+include::{snippets}/venue/section/delete-403/http-request.adoc[]
+include::{snippets}/venue/section/delete-403/http-response.adoc[]
+
+'''
+
+== 좌석 (VenueSeat)
+
+=== 좌석 목록 조회
+
+`GET /api/v1/venues/{venueId}/sections/{sectionId}/seats`
+
+모든 역할이 요청할 수 있습니다.
+SEATED 타입 구역 전용입니다.
+
+==== 경로 파라미터
+include::{snippets}/venue/seat/list/path-parameters.adoc[]
+
+==== 요청 예시
+include::{snippets}/venue/seat/list/http-request.adoc[]
+
+==== 응답 필드
+include::{snippets}/venue/seat/list/response-fields.adoc[]
+
+==== 응답 예시
+include::{snippets}/venue/seat/list/http-response.adoc[]
+
+==== 오류 — 구역 없음 (404)
+include::{snippets}/venue/seat/list-404/http-request.adoc[]
+include::{snippets}/venue/seat/list-404/http-response.adoc[]
+
+'''
+
+=== 좌석 상세 조회
+
+`GET /api/v1/venues/{venueId}/sections/{sectionId}/seats/{seatId}`
+
+모든 역할이 요청할 수 있습니다.
+
+==== 경로 파라미터
+include::{snippets}/venue/seat/get/path-parameters.adoc[]
+
+==== 요청 예시
+include::{snippets}/venue/seat/get/http-request.adoc[]
+
+==== 응답 필드
+include::{snippets}/venue/seat/get/response-fields.adoc[]
+
+==== 응답 예시
+include::{snippets}/venue/seat/get/http-response.adoc[]
+
+'''
+
+=== 좌석 상태 변경
+
+`PATCH /api/v1/venues/{venueId}/sections/{sectionId}/seats/{seatId}/status`
+
+ADMIN 역할만 요청할 수 있습니다.
+
+==== 요청 헤더
+include::{snippets}/venue/seat/update-broken/request-headers.adoc[]
+
+==== 경로 파라미터
+include::{snippets}/venue/seat/update-broken/path-parameters.adoc[]
+
+==== 요청 본문
+include::{snippets}/venue/seat/update-broken/request-fields.adoc[]
+
+==== AVAILABLE → BROKEN
+
+===== 요청 예시
+include::{snippets}/venue/seat/update-broken/http-request.adoc[]
+
+===== 응답 필드
+include::{snippets}/venue/seat/update-broken/response-fields.adoc[]
+
+===== 응답 예시
+include::{snippets}/venue/seat/update-broken/http-response.adoc[]
+
+==== BROKEN → AVAILABLE
+
+===== 요청 예시
+include::{snippets}/venue/seat/update-available/http-request.adoc[]
+
+===== 응답 예시
+include::{snippets}/venue/seat/update-available/http-response.adoc[]
+
+==== 오류 — 이미 BROKEN (400)
+include::{snippets}/venue/seat/update-400-already-broken/http-request.adoc[]
+include::{snippets}/venue/seat/update-400-already-broken/http-response.adoc[]
+
+==== 오류 — physicalStatus 누락 (400)
+include::{snippets}/venue/seat/update-400-missing/http-request.adoc[]
+include::{snippets}/venue/seat/update-400-missing/http-response.adoc[]
