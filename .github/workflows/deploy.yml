@@ -9,6 +9,7 @@ on:
         branches:
             - main
             - dev
+            - test-deploy
     workflow_dispatch:
 
 permissions:
@@ -79,7 +80,7 @@ jobs:
               run: |
                   docker buildx build --platform linux/amd64 \
                     --build-arg GITHUB_USER=${{ secrets.GH_USER }} \
-                    --secret id=github_token,env=GITHUB_TOKEN \
+                    --secret id=github_token,src=<(echo "${{ secrets.GH_TOKEN }}") \
                     -t $REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
                     -t $REGISTRY/$ECR_REPOSITORY:latest \
                     --push \
