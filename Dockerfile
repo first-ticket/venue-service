@@ -21,8 +21,8 @@ RUN --mount=type=secret,id=github_token \
 # 3. 소스 코드 복사 및 실행 가능한 JAR 빌드
 COPY src src
 RUN --mount=type=secret,id=github_token \
-    GITHUB_TOKEN="$(cat /run/secrets/github_token)" \
-    GITHUB_USER=$GITHUB_USER \
+    export GITHUB_TOKEN="$(cat /run/secrets/github_token)" && \
+    export GITHUB_USER=$GITHUB_USER && \
     mkdir -p build/generated-snippets && \
     ./gradlew clean bootJar --no-daemon -x test
 
