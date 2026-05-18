@@ -3,6 +3,12 @@ spring:
         activate:
             on-profile: test
 
+    cloud:
+        config:
+            enabled: false  # Config Server 로드 시도 자체를 막음
+        discovery:
+            enabled: false
+
     datasource:
         url: jdbc:h2:mem:program_test;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE
         driver-class-name: org.h2.Driver
@@ -26,12 +32,6 @@ spring:
 
     kafka:
         bootstrap-servers: localhost:9092
-
-    security:
-        oauth2:
-            resourceserver:
-                jwt:
-                    issuer-uri: http://localhost:8080/realms/test
 
 eureka:
     client:
