@@ -11,21 +11,26 @@ COPY gradle gradle
 COPY build.gradle settings.gradle ./
 RUN chmod +x gradlew
 
-# 2. 의존성 미리 다운로드
+# 외부에서 넘겨받은 build-arg를 도커 환경 변수(ENV)로 승격하여 세션 전체에 고정
 ARG GITHUB_USER
+ENV GITHUB_USER=$GITHUB_USER
+
+# 2. 의존성 미리 다운로드
+RUN --mount=type=secret,id=github_token \
+    GITHUB_TOKEN="$(cat /run/secrets/github_token)" \
+    ./gradlew dependencies --no-daemon
+
+# 3. 소스 코드 복사
+COPY src src
+
+# ✨ [핵심 수정]
+# mkdir를 먼저 실행하여 폴더를 확보한 뒤,
+# 진짜 Gradle 명령어를 실행하는 시점에 두 변수(TOKEN, USER)를 밀착 주입합니다.
+RUN mkdir -p build/generated-snippets
+
 RUN --mount=type=secret,id=github_token \
     GITHUB_TOKEN="$(cat /run/secrets/github_token)" \
     GITHUB_USER=$GITHUB_USER \
-    ./gradlew dependencies --no-daemon
-
-# 3. 소스 코드 복사 및 실행 가능한 JAR 빌드
-COPY src src
-
-ARG GITHUB_USER
-RUN --mount=type=secret,id=github_token \
-    export GITHUB_TOKEN="$(cat /run/secrets/github_token)" && \
-    export GITHUB_USER=$GITHUB_USER && \
-    mkdir -p build/generated-snippets && \
     ./gradlew clean bootJar --no-daemon -x test
 
 # 4. Spring Boot 3의 계층화 기능을 활용해 레이어 추출
