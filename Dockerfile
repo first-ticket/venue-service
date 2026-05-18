@@ -23,6 +23,7 @@ COPY src src
 RUN --mount=type=secret,id=github_token \
     GITHUB_TOKEN="$(cat /run/secrets/github_token)" \
     GITHUB_USER=$GITHUB_USER \
+    mkdir -p build/generated-snippets && \
     ./gradlew clean bootJar --no-daemon -x test
 
 # 4. Spring Boot 3의 계층화 기능을 활용해 레이어 추출
