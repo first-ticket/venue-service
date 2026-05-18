@@ -77,10 +77,12 @@ jobs:
               env:
                   REGISTRY: ${{ steps.ecr-login.outputs.registry }}
                   IMAGE_TAG: ${{ github.sha }}
+                  GH_USER: ${{ secrets.GH_USER }}
+                  GH_TOKEN: ${{ secrets.GH_TOKEN }}
               run: |
                   docker buildx build --platform linux/amd64 \
-                    --build-arg GITHUB_USER=${{ secrets.GH_USER }} \
-                    --secret id=github_token,src=<(echo "${{ secrets.GH_TOKEN }}") \
+                    --build-arg GITHUB_USER="$GH_USER" \
+                    --secret id=github_token,src=<(echo "$GH_TOKEN") \
                     -t $REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
                     -t $REGISTRY/$ECR_REPOSITORY:latest \
                     --push \

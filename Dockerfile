@@ -11,7 +11,6 @@ COPY gradle gradle
 COPY build.gradle settings.gradle ./
 RUN chmod +x gradlew
 
-# 외부에서 넘겨받은 build-arg를 도커 환경 변수(ENV)로 승격하여 세션 전체에 고정
 ARG GITHUB_USER
 ENV GITHUB_USER=$GITHUB_USER
 
@@ -30,7 +29,6 @@ RUN mkdir -p build/generated-snippets
 
 RUN --mount=type=secret,id=github_token \
     GITHUB_TOKEN="$(cat /run/secrets/github_token)" \
-    GITHUB_USER=$GITHUB_USER \
     ./gradlew clean bootJar --no-daemon -x test
 
 # 4. Spring Boot 3의 계층화 기능을 활용해 레이어 추출
