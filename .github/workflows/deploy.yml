@@ -76,10 +76,12 @@ jobs:
               env:
                   REGISTRY: ${{ steps.ecr-login.outputs.registry }}
                   IMAGE_TAG: ${{ github.sha }}
+                  GH_USER: ${{ secrets.GH_USER }}
+                  GH_TOKEN: ${{ secrets.GH_TOKEN }}
               run: |
                   docker buildx build --platform linux/amd64 \
-                    --build-arg GITHUB_USER=${{ secrets.GH_USER }} \
-                    --secret id=github_token,env=GITHUB_TOKEN \
+                    --build-arg GITHUB_USER="$GH_USER" \
+                    --secret id=github_token,src=<(echo "$GH_TOKEN") \
                     -t $REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
                     -t $REGISTRY/$ECR_REPOSITORY:latest \
                     --push \
@@ -95,19 +97,10 @@ jobs:
                   aws ecs describe-task-definition --task-definition venue-service \
                     --query taskDefinition > task-definition.json
 
-            - name: Fill in the new image ID in the Amazon ECS task definition
-              id: render-task-def
-              uses: aws-actions/amazon-ecs-render-task-definition@v1
-              with:
-                  task-definition: task-definition.json
-                  container-name: venue-service
-                  image: ${{ steps.ecr-login.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
-
-
             - name: Deploy to ECS
               uses: aws-actions/amazon-ecs-deploy-task-definition@v2
               with:
-                  task-definition: ${{ steps.render-task-def.outputs.task-definition }}
+                  task-definition: task-definition.json
                   service: venue-service
                   cluster: first-ticket-cluster
                   wait-for-service-stability: false
