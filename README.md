@@ -125,14 +125,6 @@ docker-compose up --build
 | `GET` | `/api/v1/venues/{venueId}/sections/{sectionId}/seats/{seatId}` | ALL | 좌석 상세 조회 |
 | `PATCH` | `/api/v1/venues/{venueId}/sections/{sectionId}/seats/{seatId}/status` | ADMIN | 좌석 상태 변경 |
 
-### 내부 API (Feign 전용)
-
-| 메서드 | 경로 | 설명 |
-|--------|------|------|
-| `GET` | `/api/v1/venues/{venueId}/validation` | 수용량 + seatTemplates 조회 |
-| `GET` | `/api/v1/venues/{venueId}/sections/{sectionId}/validation` | 구역 타입·수용량 조회 |
-| `GET` | `/api/v1/venues/{venueId}/info` | 공연장 이름·주소 조회 |
-
 > REST Docs 문서: 서버 실행 후 `/docs/venue-api.html` 에서 확인할 수 있습니다.
 
 ---
